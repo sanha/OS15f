@@ -100,6 +100,11 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+	/* Added to operate wait-queue. Owned by thread.c */
+	bool wait_flag;						/* waiting or not */
+	unsigned int wait_start;			/* wait started time */
+	unsigned int wait_length;			/* waiting length */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -138,4 +143,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+void thread_sleep ();					/* declaration of thread sleep func. */
 #endif /* threads/thread.h */
