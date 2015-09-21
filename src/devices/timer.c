@@ -94,7 +94,7 @@ timer_sleep (int64_t ticks)
   ASSERT (intr_get_level () == INTR_ON);
 //  while (timer_elapsed (start) < ticks) 
 //    thread_yield ();
-  thread_sleep();	// Implemented in thread.c which supports wait-queuing.
+  thread_sleep(ticks);	// Implemente in thread.c which supports wait-queuing.
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be

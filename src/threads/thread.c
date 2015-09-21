@@ -29,6 +29,10 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* List of waiting processes. added to implement wait-queueing.
+   Processes are ordered by remaining waiting time. */
+static struct list wait_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -93,6 +97,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&wait_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -376,7 +381,15 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   return 0;
 }
-
+
+void thread_sleep (int64_t ticks) {
+	struct thread *cur = thread_current ();
+	cur->wait_flag = 1;	
+	// TODO: thread ticks add
+	thread_block();
+	// TODO: add to wait_list
+}
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -465,6 +478,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+	t->wait_flag = 0;
+	t->wait_start = 0;
+	t->wait_length = 0;
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -491,6 +508,10 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+	//for(;;) {
+		// TODO: checking front of wait_list;
+	//}
+
   if (list_empty (&ready_list))
     return idle_thread;
   else

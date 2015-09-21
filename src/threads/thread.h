@@ -102,7 +102,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
 	/* Added to operate wait-queue. Owned by thread.c */
-	bool wait_flag;						/* waiting or not */
+	bool wait_flag;					/* waiting or not */
 	unsigned int wait_start;			/* wait started time */
 	unsigned int wait_length;			/* waiting length */
   };
