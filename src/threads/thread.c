@@ -382,12 +382,18 @@ thread_get_recent_cpu (void)
   return 0;
 }
 
+/* Make a thread into sleep state and put it into wait queue */
 void thread_sleep (int64_t ticks) {
+	/* Preparing thread to be blocked */
 	struct thread *cur = thread_current ();
-	cur->wait_flag = 1;	
-	// TODO: thread ticks add
+	int64_t start = timer_ticks ();
+
+	cur->wait_flag = true;	
+	cur->wait_start = start;
+	cur->wait_length = ticks;
+	
 	thread_block();
-	// TODO: add to wait_list
+	list_push_back (&wait_list, &cur->elem);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.

@@ -103,8 +103,8 @@ struct thread
 
 	/* Added to operate wait-queue. Owned by thread.c */
 	bool wait_flag;					/* waiting or not */
-	unsigned int wait_start;			/* wait started time */
-	unsigned int wait_length;			/* waiting length */
+	int64_t wait_start;			/* wait started time */
+	int64_t wait_length;			/* waiting length */
   };
 
 /* If false (default), use round-robin scheduler.
