@@ -337,6 +337,26 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* Make a thread into sleep state and put it into wait queue */
+void thread_sleep (int64_t ticks) {
+    /* Preparing thread to be blocked */
+    struct thread *cur = thread_current (); 
+    int64_t start = timer_ticks (); 
+
+    cur->wait_flag = true;  
+    cur->wait_start = start;
+    cur->wait_length = ticks;
+
+	/* Disable interrupt to block thread */
+	enum intr_level old_level;
+	old_level = intr_disable (); 
+
+    /* Blocking thread. thread_block will deal with swapping threads */
+    thread_block();
+    list_push_back (&wait_list, &cur->elem);
+	intr_set_level (old_level);		// enable interrupt
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -380,20 +400,6 @@ thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
   return 0;
-}
-
-/* Make a thread into sleep state and put it into wait queue */
-void thread_sleep (int64_t ticks) {
-	/* Preparing thread to be blocked */
-	struct thread *cur = thread_current ();
-	int64_t start = timer_ticks ();
-
-	cur->wait_flag = true;	
-	cur->wait_start = start;
-	cur->wait_length = ticks;
-	
-	thread_block();
-	list_push_back (&wait_list, &cur->elem);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -484,7 +490,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-	t->wait_flag = 0;
+	t->wait_flag = false;
 	t->wait_start = 0;
 	t->wait_length = 0;
 
@@ -514,9 +520,28 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-	//for(;;) {
-		// TODO: checking front of wait_list;
-	//}
+	struct list_elem *e;
+	struct thread *t;
+	/* Before poping thread from ready queue, check wait queue */
+	for (e = list_begin (&wait_list);
+			e != list_end (&wait_list);) {
+		/* If sleeping was expired */
+		t = list_entry (e, struct thread, allelem);		
+		if (timer_elapsed (t->wait_start) >= t->wait_length) {
+			/* Sleeping is over */
+			t->wait_flag = false;
+			t->wait_start = 0;
+			t->wait_length = 0;
+
+			/* Remove this thread from wait queue */
+			e = list_next (e);
+			list_remove (e->prev);
+			
+			/* Unblock this thread and put it to ready queue */
+			thread_unblock (t);
+		}
+		else e = list_next (e);
+	}
 
   if (list_empty (&ready_list))
     return idle_thread;
