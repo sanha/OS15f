@@ -337,19 +337,24 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* Make a thread into sleep state and put it into wait queue */
+/* PRJ1: Make a thread into sleep state and put it into wait queue */
 void thread_sleep (int64_t ticks) {
-    /* Preparing thread to be blocked */
-    struct thread *cur = thread_current (); 
-    int64_t start = timer_ticks (); 
+  	//if (cur != idle_thread) 
+    //	list_push_back (&ready_list, &cur->elem);
+	//cur->status = THREAD_READY;
+	//schedule ();
 
+	/* Disable interrupt to block thread */
+	struct thread *cur = thread_current ();
+	enum intr_level old_level;
+	ASSERT (!intr_context ());
+	old_level = intr_disable ();
+
+    /* Preparing thread to be blocked */
+    int64_t start = timer_ticks (); 
     cur->wait_flag = true;  
     cur->wait_start = start;
     cur->wait_length = ticks;
-
-	/* Disable interrupt to block thread */
-	enum intr_level old_level;
-	old_level = intr_disable (); 
 
     /* Blocking thread. thread_block will deal with swapping threads */
     thread_block();
@@ -522,9 +527,10 @@ next_thread_to_run (void)
 {
 	struct list_elem *e;
 	struct thread *t;
-	/* Before poping thread from ready queue, check wait queue */
+	/* PRJ1: Before poping thread from ready queue, check wait queue */
 	for (e = list_begin (&wait_list);
 			e != list_end (&wait_list);) {
+//	if (0) {
 		/* If sleeping was expired */
 		t = list_entry (e, struct thread, allelem);		
 		if (timer_elapsed (t->wait_start) >= t->wait_length) {
