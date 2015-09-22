@@ -338,27 +338,46 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 /* PRJ1: Make a thread into sleep state and put it into wait queue */
-void thread_sleep (int64_t ticks) {
-  	//if (cur != idle_thread) 
-    //	list_push_back (&ready_list, &cur->elem);
-	//cur->status = THREAD_READY;
-	//schedule ();
-
+void thread_sleep (int64_t sleep_ticks) {
 	/* Disable interrupt to block thread */
 	struct thread *cur = thread_current ();
 	enum intr_level old_level;
 	ASSERT (!intr_context ());
 	old_level = intr_disable ();
 
+//	printf ("cur is %x, i'll sleep %d sleep_ticks!\n", cur, sleep_ticks);
+
     /* Preparing thread to be blocked */
     int64_t start = timer_ticks (); 
-    cur->wait_flag = true;  
-    cur->wait_start = start;
-    cur->wait_length = ticks;
+//    cur->wait_flag = true;  
+//    cur->wait_start = start;
+//    cur->wait_length = sleep_ticks;
+	cur->wakeup_ticks = start + sleep_ticks;
+
+//	printf ("cur->wait is %d\n", cur->wakeup_ticks);
 
     /* Blocking thread. thread_block will deal with swapping threads */
-    thread_block();
-    list_push_back (&wait_list, &cur->elem);
+	if (cur != idle_thread)
+		list_push_back (&wait_list, &cur->elem);
+
+	// TESTCODE
+//	printf ("Wait_list is empty? %d\n",	list_empty (&wait_list));
+    struct list_elem *e;
+    struct thread *t;
+	for (e = list_begin (&wait_list);
+            e != list_end (&wait_list);
+			e = list_next (e)) {
+        t = (struct thread *)((void *)list_entry (e, struct thread, allelem) - 8);  // TODO: WTF? 
+//		printf ("Thread %x's wait is %d %d %d\n", t, t->wait_flag, t->wait_start, t->wait_length);
+//		printf ("Thread %x's waking-up time is %d\n", t, t->wakeup_ticks);
+    }
+
+    thread_block ();					// TODO: blocking failed?
+
+//	printf ("hi2\n");
+
+//    list_push_back (&wait_list, &cur->elem);
+//	printf ("cur is %x now\n", cur);
 	intr_set_level (old_level);		// enable interrupt
 }
 
@@ -495,9 +514,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-	t->wait_flag = false;
-	t->wait_start = 0;
-	t->wait_length = 0;
+  /* PRJ1: initalizing wait variables */
+//	t->wait_flag = false;
+//	t->wait_start = 0;
+//	t->wait_length = 0;
+  t->wakeup_ticks = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -530,14 +551,15 @@ next_thread_to_run (void)
 	/* PRJ1: Before poping thread from ready queue, check wait queue */
 	for (e = list_begin (&wait_list);
 			e != list_end (&wait_list);) {
-//	if (0) {
 		/* If sleeping was expired */
-		t = list_entry (e, struct thread, allelem);		
-		if (timer_elapsed (t->wait_start) >= t->wait_length) {
+		t = (struct thread *) ((void *)list_entry (e, struct thread, allelem) - 8);		
+		if (t->wakeup_ticks <= timer_ticks ()) {
+//		if (timer_elapsed (t->wait_start) >= t->wait_length) {
 			/* Sleeping is over */
-			t->wait_flag = false;
-			t->wait_start = 0;
-			t->wait_length = 0;
+//			t->wait_flag = false;
+//			t->wait_start = 0;
+//			t->wait_length = 0;
+			t->wakeup_ticks = 0;
 
 			/* Remove this thread from wait queue */
 			e = list_next (e);
