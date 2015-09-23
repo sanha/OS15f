@@ -349,12 +349,13 @@ void thread_sleep (int64_t sleep_ticks) {
 
     /* Preparing thread to be blocked */
     int64_t start = timer_ticks (); 
-//    cur->wait_flag = true;  
-//    cur->wait_start = start;
-//    cur->wait_length = sleep_ticks;
-	cur->wakeup_ticks = start + sleep_ticks;
+    cur->wait_flag = true;  
+    cur->wait_start = start;
+    cur->wait_length = sleep_ticks;
+//	cur->wakeup_ticks = start + sleep_ticks;
 
 //	printf ("cur->wait is %d\n", cur->wakeup_ticks);
+//	printf ("cur->wait is %d, %d, %d\n", cur->wait_flag, cur->wait_start, cur->wait_length);
 
     /* Blocking thread. thread_block will deal with swapping threads */
 	if (cur != idle_thread)
@@ -372,12 +373,8 @@ void thread_sleep (int64_t sleep_ticks) {
 //		printf ("Thread %x's waking-up time is %d\n", t, t->wakeup_ticks);
     }
 
-    thread_block ();					// TODO: blocking failed?
-
-//	printf ("hi2\n");
-
-//    list_push_back (&wait_list, &cur->elem);
-//	printf ("cur is %x now\n", cur);
+    thread_block ();					
+	
 	intr_set_level (old_level);		// enable interrupt
 }
 
@@ -514,11 +511,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  /* PRJ1: initalizing wait variables */
-//	t->wait_flag = false;
-//	t->wait_start = 0;
-//	t->wait_length = 0;
-  t->wakeup_ticks = 0;
+	/* PRJ1: initalizing wait variables */
+	t->wait_flag = false;
+	t->wait_start = 0;
+	t->wait_length = 0;
+//  t->wakeup_ticks = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -553,13 +550,13 @@ next_thread_to_run (void)
 			e != list_end (&wait_list);) {
 		/* If sleeping was expired */
 		t = (struct thread *) ((void *)list_entry (e, struct thread, allelem) - 8);		
-		if (t->wakeup_ticks <= timer_ticks ()) {
-//		if (timer_elapsed (t->wait_start) >= t->wait_length) {
+//		if (t->wakeup_ticks <= timer_ticks ()) {
+		if (timer_elapsed (t->wait_start) >= t->wait_length) {
 			/* Sleeping is over */
-//			t->wait_flag = false;
-//			t->wait_start = 0;
-//			t->wait_length = 0;
-			t->wakeup_ticks = 0;
+			t->wait_flag = false;
+			t->wait_start = 0;
+			t->wait_length = 0;
+//			t->wakeup_ticks = 0;
 
 			/* Remove this thread from wait queue */
 			e = list_next (e);

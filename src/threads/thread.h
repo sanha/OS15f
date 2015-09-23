@@ -94,10 +94,10 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* Added to operate wait-queue. Owned by thread.c */
-//    bool wait_flag;                 /* waiting or not */
-//    int64_t wait_start;         /* wait started time */
-//    int64_t wait_length;            /* waiting length */
-	int64_t wakeup_ticks;			/* waking-up ticks */
+    bool wait_flag;                 /* waiting or not */
+    int64_t wait_start;         /* wait started time */
+    int64_t wait_length;            /* waiting length */
+//	int64_t wakeup_ticks;			/* waking-up ticks */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
