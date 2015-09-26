@@ -337,6 +337,14 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* PRJ1: less function for waiting threads */
+bool less_wait (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+    struct thread *t1 = list_entry (elem1, struct thread, elem);
+    struct thread *t2 = list_entry (elem2, struct thread, elem);
+
+    return t1->wait_start + t1->wait_length < t2->wait_start + t2->wait_length;
+}
+
 /* PRJ1: Make a thread into sleep state and put it into wait queue */
 void thread_sleep (int64_t sleep_ticks) {
 	/* Disable interrupt to block thread */
@@ -359,20 +367,22 @@ void thread_sleep (int64_t sleep_ticks) {
 
     /* Blocking thread. thread_block will deal with swapping threads */
 	if (cur != idle_thread)
-		list_push_back (&wait_list, &cur->elem);
+//		list_push_back (&wait_list, &cur->elem);	
+		list_insert_ordered(&wait_list, &cur->elem, less_wait, NULL);
 
+/*
 	// TESTCODE
-//	printf ("Wait_list is empty? %d\n",	list_empty (&wait_list));
+	printf ("Wait_list is empty? %d\n",	list_empty (&wait_list));
     struct list_elem *e;
     struct thread *t;
 	for (e = list_begin (&wait_list);
             e != list_end (&wait_list);
 			e = list_next (e)) {
         t = (struct thread *)((void *)list_entry (e, struct thread, allelem) - 8);  // TODO: WTF? 
-//		printf ("Thread %x's wait is %d %d %d\n", t, t->wait_flag, t->wait_start, t->wait_length);
-//		printf ("Thread %x's waking-up time is %d\n", t, t->wakeup_ticks);
+		printf ("Thread %x's wait is %d %d %d\n", t, t->wait_flag, t->wait_start, t->wait_length);
+		printf ("Thread %x's waking-up time is %d\n", t, t->wakeup_ticks);
     }
-
+*/
     thread_block ();					
 	
 	intr_set_level (old_level);		// enable interrupt
@@ -515,7 +525,6 @@ init_thread (struct thread *t, const char *name, int priority)
 	t->wait_flag = false;
 	t->wait_start = 0;
 	t->wait_length = 0;
-//  t->wakeup_ticks = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -549,23 +558,23 @@ next_thread_to_run (void)
 	for (e = list_begin (&wait_list);
 			e != list_end (&wait_list);) {
 		/* If sleeping was expired */
-		t = (struct thread *) ((void *)list_entry (e, struct thread, allelem) - 8);		
-//		if (t->wakeup_ticks <= timer_ticks ()) {
+		t = list_entry (e, struct thread, elem);
+
 		if (timer_elapsed (t->wait_start) >= t->wait_length) {
 			/* Sleeping is over */
 			t->wait_flag = false;
 			t->wait_start = 0;
 			t->wait_length = 0;
-//			t->wakeup_ticks = 0;
 
 			/* Remove this thread from wait queue */
 			e = list_next (e);
 			list_remove (e->prev);
-			
+
 			/* Unblock this thread and put it to ready queue */
 			thread_unblock (t);
 		}
-		else e = list_next (e);
+//		else e = list_next (e);
+		else break;
 	}
 
   if (list_empty (&ready_list))
