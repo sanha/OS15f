@@ -243,8 +243,15 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+//  list_push_back (&ready_list, &t->elem);	// TODO: Ordering it by priority
+  list_insert_ordered(&ready_list, &t->elem, big_ready, NULL);
   t->status = THREAD_READY;
+
+	/* Waking-up preemption */
+//	struct thread *cur = thread_current ();
+//	if (cur->priority < t->priority && cur!=idle_thread && !intr_context())
+//		thread_yield ();
+
   intr_set_level (old_level);
 }
 
@@ -314,7 +321,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+//    list_push_back (&ready_list, &cur->elem);		//TODO: Change to ordering
+	  list_insert_ordered(&ready_list, &cur->elem, big_ready, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -344,6 +352,21 @@ bool less_wait (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
 
     return t1->wait_start + t1->wait_length < t2->wait_start + t2->wait_length;
 }
+
+/* PRJ1: less function for ready threads */
+bool less_ready (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+	struct thread *t1 = list_entry (elem1, struct thread, elem);
+	struct thread *t2 = list_entry (elem2, struct thread, elem);
+
+	return t1->priority < t2->priority;
+}
+bool big_ready (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+    struct thread *t1 = list_entry (elem1, struct thread, elem);
+    struct thread *t2 = list_entry (elem2, struct thread, elem);
+
+    return t1->priority > t2->priority;
+}
+ 
 
 /* PRJ1: Make a thread into sleep state and put it into wait queue */
 void thread_sleep (int64_t sleep_ticks) {
