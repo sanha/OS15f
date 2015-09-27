@@ -128,9 +128,34 @@ thread_start (void)
 void
 thread_tick (void) 
 {
-  struct thread *t = thread_current ();
+//  struct thread *t = thread_current ();
 
-  /* Update statistics. */
+	/* PRJ1: Checking wait-list to find expired thread */
+	struct list_elem *e; 
+    struct thread *t; 
+    for (e = list_begin (&wait_list);
+            e != list_end (&wait_list);) {
+        /* If sleeping was expired */
+        t = list_entry (e, struct thread, elem);
+
+        if (timer_elapsed (t->wait_start) >= t->wait_length) {
+            /* Sleeping is over */
+            t->wait_flag = false;
+            t->wait_start = 0;
+            t->wait_length = 0;
+
+            /* Remove this thread from wait queue */
+            e = list_next (e);
+            list_remove (e->prev);
+
+            /* Unblock this thread and put it to ready queue */
+            thread_unblock (t);
+        }
+        else break;
+    }
+
+	/* Update statistics. */
+	t = thread_current ();
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -243,16 +268,28 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-//  list_push_back (&ready_list, &t->elem);	// TODO: Ordering it by priority
   list_insert_ordered(&ready_list, &t->elem, big_ready, NULL);
   t->status = THREAD_READY;
 
-	/* Waking-up preemption */
+	/* PRJ1: Waking-up preemption */
+	struct thread *cur = thread_current ();
+    if (!is_sorted (list_begin (&ready_list), list_end (&ready_list), big_ready, NULL)) {
+	    list_sort (&ready_list, big_ready, NULL);
+	}
+	if (cur->priority < t->priority && cur != idle_thread) {
+		if (intr_context ())	
+			intr_yield_on_return ();
+		else
+			thread_yield ();
+	}
+    intr_set_level (old_level);
+
+	
 //	struct thread *cur = thread_current ();
-//	if (cur->priority < t->priority && cur!=idle_thread && !intr_context())
+//	if (cur->priority < t->priority && cur!=idle_thread)
 //		thread_yield ();
 
-  intr_set_level (old_level);
+//  intr_set_level (old_level);
 }
 
 /* Returns the name of the running thread. */
@@ -415,7 +452,22 @@ void thread_sleep (int64_t sleep_ticks) {
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+	thread_current ()->priority = new_priority;
+	
+	/* PRJ1: implementing preemption */
+  	enum intr_level old_level = intr_disable ();
+    if (list_empty (&ready_list)) {
+    	intr_set_level (old_level);
+		return ;
+	}
+    else if (!is_sorted (list_begin (&ready_list), list_end (&ready_list), big_ready, NULL)) {
+		list_sort (&ready_list, big_ready, NULL);
+	}
+	if (intr_context ())
+			intr_yield_on_return ();
+	else	thread_yield ();
+	intr_set_level (old_level);
+//	thread_yield ();
 }
 
 /* Returns the current thread's priority. */
@@ -575,40 +627,15 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-	struct list_elem *e;
-	struct thread *t;
-	/* PRJ1: Before poping thread from ready queue, check wait queue */
-	for (e = list_begin (&wait_list);
-			e != list_end (&wait_list);) {
-		/* If sleeping was expired */
-		t = list_entry (e, struct thread, elem);
-
-		if (timer_elapsed (t->wait_start) >= t->wait_length) {
-			/* Sleeping is over */
-			t->wait_flag = false;
-			t->wait_start = 0;
-			t->wait_length = 0;
-
-			/* Remove this thread from wait queue */
-			e = list_next (e);
-			list_remove (e->prev);
-
-			/* Unblock this thread and put it to ready queue */
-			thread_unblock (t);
-		}
-//		else e = list_next (e);
-		else break;
-	}
-
 	/* Popping thread having highest priority */
-  if (list_empty (&ready_list))
-    return idle_thread;
-  else if (is_sorted (list_begin (&ready_list), list_end (&ready_list), big_ready, NULL))
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
-  else {
-  	list_sort (&ready_list, big_ready, NULL);
-	return list_entry (list_pop_front (&ready_list), struct thread, elem);
-  }
+	if (list_empty (&ready_list))
+    	return idle_thread;
+	else if (is_sorted (list_begin (&ready_list), list_end (&ready_list), big_ready, NULL))
+    	return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	else {
+  		list_sort (&ready_list, big_ready, NULL);
+		return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	}
 }
 
 /* Completes a thread switch by activating the new thread's page
