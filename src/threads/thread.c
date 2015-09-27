@@ -600,10 +600,15 @@ next_thread_to_run (void)
 		else break;
 	}
 
+	/* Popping thread having highest priority */
   if (list_empty (&ready_list))
     return idle_thread;
-  else
+  else if (is_sorted (list_begin (&ready_list), list_end (&ready_list), big_ready, NULL))
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else {
+  	list_sort (&ready_list, big_ready, NULL);
+	return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page

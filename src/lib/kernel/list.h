@@ -158,7 +158,7 @@ bool list_empty (struct list *);
 
 /* Miscellaneous. */
 void list_reverse (struct list *);
-
+
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
@@ -173,6 +173,9 @@ void list_insert_ordered (struct list *, struct list_elem *,
                           list_less_func *, void *aux);
 void list_unique (struct list *, struct list *duplicates,
                   list_less_func *, void *aux);
+
+/* PRJ1 */
+bool is_sorted ();
 
 /* Max and min. */
 struct list_elem *list_max (struct list *, list_less_func *, void *aux);
