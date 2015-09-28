@@ -428,7 +428,7 @@ void thread_sleep (int64_t sleep_ticks) {
     /* Blocking thread. thread_block will deal with swapping threads */
 	if (cur != idle_thread)
 //		list_push_back (&wait_list, &cur->elem);	
-		list_insert_ordered(&wait_list, &cur->elem, less_wait, NULL);
+		list_insert_ordered (&wait_list, &cur->elem, less_wait, NULL);
 
 /*
 	// TESTCODE
