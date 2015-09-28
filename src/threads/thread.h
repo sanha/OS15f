@@ -93,11 +93,16 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    /* Added to operate wait-queue. Owned by thread.c */
+    /* PRJ1: Added to operate wait-queue.*/
     bool wait_flag;                 /* waiting or not */
     int64_t wait_start;         /* wait started time */
     int64_t wait_length;            /* waiting length */
 //	int64_t wakeup_ticks;			/* waking-up ticks */
+
+	/* PRJ1: variables for priority donation. */
+	int priority_base;				/* at te end of donation, priority should be this one */
+	struct list lock_list;			/* list of lock it has */
+	struct lock *wait_lock;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

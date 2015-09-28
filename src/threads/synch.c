@@ -187,7 +187,17 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  lock->priority = PRI_MIN;
 }
+
+/* PRJ1: bigger function for lock */
+bool big_lock (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
+    struct lock *s1 = list_entry (elem1, struct lock, elem);
+    struct lock *s2 = list_entry (elem2, struct lock, elem);
+
+    return s1->priority > s2->priority;
+}
+
 
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
@@ -204,6 +214,20 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+	/* PRJ1: priority donation */
+	enum intr_level old_level = intr_disable ();
+	struct thread *cur = thread_current ();
+	struct thread *lock_holder = lock->holder;
+	if (lock_holder != NULL) {
+		if (cur->priority > lock_holder->priority) {
+//			lock_holder->priority = cur->priority;	// donation
+		} // TODO:
+//		list_insert_ordered
+		// LISTING ORDERED
+		// LOCK PRIORITY SETTING
+	}
+	intr_set_level (old_level);
+	
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
