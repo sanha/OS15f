@@ -24,6 +24,7 @@ struct lock
     struct semaphore semaphore; /* Binary semaphore controlling access. */
 	/* PRJ1: for priority donation */
 	struct list_elem elem;		/* Thread will have list of lock it has */
+	int priority_list[64];		/* list of priority of waiting threads */
 	int priority;				/* The maximum priority of thread waiting this lock */
   };
 

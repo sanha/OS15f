@@ -268,7 +268,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered(&ready_list, &t->elem, big_ready, NULL);
+  list_insert_ordered (&ready_list, &t->elem, big_ready, NULL);
   t->status = THREAD_READY;
 
 	/* PRJ1: Waking-up preemption */
@@ -438,7 +438,7 @@ thread_set_priority (int new_priority)
 	cur->priority_base = new_priority;
 	if (new_priority > cur->priority)
 		cur->priority = new_priority;
-/*	else if (new_priority < cur->priority) {
+	else if (new_priority < cur->priority) {
 		if (!list_empty (&cur->lock_list)) {
 			if (is_sorted (list_begin (&cur->lock_list), list_end (&cur->lock_list), big_lock, NULL)) 
 				list_sort (&cur->lock_list, big_lock, NULL);
@@ -447,9 +447,7 @@ thread_set_priority (int new_priority)
 		else {
 			cur->priority = new_priority;
 		}
-	} */
-	else cur->priority = new_priority;
-
+	}
 
 	/* PRJ1: implementing preemption */
     if (list_empty (&ready_list)) {

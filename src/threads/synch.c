@@ -185,6 +185,10 @@ lock_init (struct lock *lock)
 {
   ASSERT (lock != NULL);
 
+  int i;
+  for (i=0; i<64; i++) {
+	  lock->priority_list[i] = 0;
+  }
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
   lock->priority = PRI_MIN;
@@ -198,6 +202,14 @@ bool big_lock (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     return s1->priority > s2->priority;
 }
 
+/* PRJ1: find maximum priority from priority list */
+static int max_priority (int plist[64]) {
+	int i;
+	for (i=0; i<64; i++) {
+		if (plist[63-i] != 0) return 63-i;
+	}
+	return 0;
+}
 
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
@@ -219,17 +231,33 @@ lock_acquire (struct lock *lock)
 	struct thread *cur = thread_current ();
 	struct thread *lock_holder = lock->holder;
 	if (lock_holder != NULL) {
+		cur->wait_lock = lock;
+		(lock->priority_list[cur->priority]) ++;
+		lock->priority = max_priority (lock->priority_list);
 		if (cur->priority > lock_holder->priority) {
-//			lock_holder->priority = cur->priority;	// donation
-		} // TODO:
-//		list_insert_ordered
-		// LISTING ORDERED
-		// LOCK PRIORITY SETTING
+			lock_holder->priority = cur->priority;
+		}
+
+		struct thread *iter = lock_holder;
+		struct lock *iter_lock = iter->wait_lock;
+		while (iter_lock != NULL) {
+			if (cur->priority > iter->priority) {
+				(iter_lock->priority_list[iter->priority]) --;
+				(iter_lock->priority_list[cur->priority]) ++;
+				iter_lock->priority = max_priority (iter_lock->priority_list);
+				iter->priority = cur->priority;		// donation
+				iter = iter_lock->holder;
+			}
+			else break;
+		}
 	}
 	intr_set_level (old_level);
 	
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+	sema_down (&lock->semaphore);
+	old_level = intr_disable ();
+	lock->holder = cur;
+//	list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
+	intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
