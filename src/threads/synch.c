@@ -117,14 +117,13 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
 
 	/* PRJ1: check whether wait list is sorted or not */
-  	sema->value++;	//TODO: Check
+  	sema->value++;	
 	struct list *waiters = &sema->waiters;
 	if (!list_empty (waiters)) {
 		if (!is_sorted (list_begin (waiters), list_end (waiters), big_ready, NULL)) 
 			list_sort (waiters, big_ready, NULL);
 		thread_unblock (list_entry (list_pop_front (waiters), struct thread, elem));
 	}
-//  sema->value++;
   intr_set_level (old_level);
 }
 
@@ -244,8 +243,6 @@ lock_acquire (struct lock *lock)
 
 		struct thread *iter = lock_holder;
 		struct lock *iter_lock = iter->wait_lock;
-//		if (iter_lock != NULL)
-//			lock_holder = iter_lock->holder;
 		/* updating holder-chain info */
 		while (iter_lock != NULL) {
 			lock_holder = iter_lock->holder;
@@ -262,9 +259,6 @@ lock_acquire (struct lock *lock)
 
 			iter = lock_holder;
 			iter_lock = iter->wait_lock;
-//			if (iter_lock != NULL)
-//				lock_holder = iter_lock->holder;
-//			else break;
 		}
 		
 		intr_set_level (old_level);
@@ -406,7 +400,6 @@ cond_wait (struct condition *cond, struct lock *lock)
   /* PRJ1: push condition sema by priority order */
   sema_init (&waiter.semaphore, 0);
   waiter.priority = thread_current ()->priority;	// There is no sema_elem has multi-thread!
-//  list_push_back (&cond->waiters, &waiter.elem);
   list_insert_ordered (&cond->waiters, &waiter.elem, big_cond_sema, NULL);
   lock_release (lock);
   sema_down (&waiter.semaphore);

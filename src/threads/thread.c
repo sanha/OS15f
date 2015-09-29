@@ -128,8 +128,6 @@ thread_start (void)
 void
 thread_tick (void) 
 {
-//  struct thread *t = thread_current ();
-
 	/* PRJ1: Checking wait-list to find expired thread */
 	struct list_elem *e; 
     struct thread *t; 
@@ -283,13 +281,6 @@ thread_unblock (struct thread *t)
 			thread_yield ();
 	}
     intr_set_level (old_level);
-
-	
-//	struct thread *cur = thread_current ();
-//	if (cur->priority < t->priority && cur!=idle_thread)
-//		thread_yield ();
-
-//  intr_set_level (old_level);
 }
 
 /* Returns the name of the running thread. */
@@ -358,7 +349,6 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-//    list_push_back (&ready_list, &cur->elem);		//TODO: Change to ordering
 	  list_insert_ordered(&ready_list, &cur->elem, big_ready, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -390,20 +380,13 @@ bool less_wait (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     return t1->wait_start + t1->wait_length < t2->wait_start + t2->wait_length;
 }
 
-/* PRJ1: less function for ready threads */
-bool less_ready (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
-	struct thread *t1 = list_entry (elem1, struct thread, elem);
-	struct thread *t2 = list_entry (elem2, struct thread, elem);
-
-	return t1->priority < t2->priority;
-}
+/* PRJ1: bigger function for ready threads */
 bool big_ready (struct list_elem *elem1, struct list_elem *elem2, void *aux) {
     struct thread *t1 = list_entry (elem1, struct thread, elem);
     struct thread *t2 = list_entry (elem2, struct thread, elem);
 
     return t1->priority > t2->priority;
 }
- 
 
 /* PRJ1: Make a thread into sleep state and put it into wait queue */
 void thread_sleep (int64_t sleep_ticks) {
@@ -461,7 +444,6 @@ thread_set_priority (int new_priority)
 			intr_yield_on_return ();
 	else	thread_yield ();
 	intr_set_level (old_level);
-//	thread_yield ();
 }
 
 /* Returns the current thread's priority. */

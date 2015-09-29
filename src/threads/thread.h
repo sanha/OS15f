@@ -150,7 +150,6 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 bool less_wait ();			/* declaration of wait-queue less func. */
-bool less_ready ();			/* declaration of ready-queue less func. */
 bool big_ready ();		/* declaration of ready-queue less func. */
 void thread_sleep ();		/* declaration of thread sleep func. */
 #endif /* threads/thread.h */
