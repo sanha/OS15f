@@ -250,14 +250,26 @@ lock_acquire (struct lock *lock)
 			}
 			else break;
 		}
-	}
-	intr_set_level (old_level);
+		intr_set_level (old_level);
+		sema_down (&lock->semaphore);
 	
-	sema_down (&lock->semaphore);
-	old_level = intr_disable ();
-	lock->holder = cur;
-//	list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
-	intr_set_level (old_level);
+		/* cur thread got this lock */
+		old_level = intr_disable ();
+		ASSERT (lock->holder == NULL);
+		lock->holder = cur;
+		cur->wait_lock = NULL;
+		(lock->priority_list[cur->priority]) --;		
+		lock->priority = max_priority (lock->priority_list);
+		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
+		intr_set_level (old_level);
+	}
+	else {
+		ASSERT (cur->wait_lock == NULL);
+		intr_set_level (old_level);
+		sema_down (&lock->semaphore);
+		lock->holder = cur;
+		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
+	}
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -291,8 +303,28 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder = NULL;
-  sema_up (&lock->semaphore);
+	/* PRJ1: priority donation */
+  	enum intr_level old_level = intr_disable ();
+	struct thread *cur = thread_current ();
+	struct list *locks = &cur->lock_list;
+	ASSERT (cur->wait_lock == NULL); //added test code
+	list_remove (&lock->elem);
+	if (list_empty(locks)) {
+		cur->priority = cur->priority_base;
+	}
+	else {
+		if (!is_sorted (list_begin (locks), list_end (locks), big_lock, NULL)) 
+			list_sort (locks, big_lock, NULL);
+		int lock_pri = list_entry (list_begin (locks), struct lock, elem)->priority;
+		if (lock_pri > cur->priority_base)
+			cur->priority = lock_pri;
+		else 
+			cur->priority = cur->priority_base;
+	}
+	intr_set_level (old_level);
+
+	lock->holder = NULL;
+	sema_up (&lock->semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false
