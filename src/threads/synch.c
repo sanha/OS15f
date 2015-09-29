@@ -227,29 +227,46 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
 	/* PRJ1: priority donation */
+	int pre_priority = PRI_MIN;
 	enum intr_level old_level = intr_disable ();
 	struct thread *cur = thread_current ();
 	struct thread *lock_holder = lock->holder;
+	ASSERT (cur->wait_lock == NULL);
 	if (lock_holder != NULL) {
+		/* updating holder's info */
 		cur->wait_lock = lock;
 		(lock->priority_list[cur->priority]) ++;
 		lock->priority = max_priority (lock->priority_list);
 		if (cur->priority > lock_holder->priority) {
+			pre_priority = lock_holder->priority;
 			lock_holder->priority = cur->priority;
 		}
 
 		struct thread *iter = lock_holder;
 		struct lock *iter_lock = iter->wait_lock;
+//		if (iter_lock != NULL)
+//			lock_holder = iter_lock->holder;
+		/* updating holder-chain info */
 		while (iter_lock != NULL) {
-			if (cur->priority > iter->priority) {
-				(iter_lock->priority_list[iter->priority]) --;
+			lock_holder = iter_lock->holder;
+			if (cur->priority > pre_priority) {
+				(iter_lock->priority_list[pre_priority]) --;
 				(iter_lock->priority_list[cur->priority]) ++;
 				iter_lock->priority = max_priority (iter_lock->priority_list);
-				iter->priority = cur->priority;		// donation
-				iter = iter_lock->holder;
+				if (cur->priority > lock_holder->priority) {
+					pre_priority = lock_holder->priority;
+					lock_holder->priority = cur->priority;		
+				}
 			}
 			else break;
+
+			iter = lock_holder;
+			iter_lock = iter->wait_lock;
+//			if (iter_lock != NULL)
+//				lock_holder = iter_lock->holder;
+//			else break;
 		}
+		
 		intr_set_level (old_level);
 		sema_down (&lock->semaphore);
 	
@@ -260,15 +277,14 @@ lock_acquire (struct lock *lock)
 		cur->wait_lock = NULL;
 		(lock->priority_list[cur->priority]) --;		
 		lock->priority = max_priority (lock->priority_list);
-		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
+		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); 
 		intr_set_level (old_level);
 	}
 	else {
-		ASSERT (cur->wait_lock == NULL);
 		intr_set_level (old_level);
 		sema_down (&lock->semaphore);
 		lock->holder = cur;
-		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); //TODO: enable
+		list_insert_ordered (&cur->lock_list, &lock->elem, big_lock, NULL); 
 	}
 }
 
