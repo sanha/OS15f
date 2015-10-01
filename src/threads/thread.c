@@ -422,14 +422,8 @@ thread_set_priority (int new_priority)
 	if (new_priority > cur->priority)
 		cur->priority = new_priority;
 	else if (new_priority < cur->priority) {
-		if (!list_empty (&cur->lock_list)) {
-			if (is_sorted (list_begin (&cur->lock_list), list_end (&cur->lock_list), big_lock, NULL)) 
-				list_sort (&cur->lock_list, big_lock, NULL);
-			cur->priority = list_entry (list_begin (&cur->lock_list), struct lock, elem)->priority;
-		}
-		else {
+		if (list_empty (&cur->lock_list)) 
 			cur->priority = new_priority;
-		}
 	}
 
 	/* PRJ1: implementing preemption */
