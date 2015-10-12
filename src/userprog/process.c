@@ -29,6 +29,10 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *fn, *sv;
+  char fn_copy2[PGSIZE+5];
+  struct file *fptr = NULL;
+  bool exist_flag = true;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -38,12 +42,25 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  /* TODO
+     Check existence of file */
+  /*strlcpy(fn_copy2, file_name, strlen(file_name)+1);
+  fn = strtok_r(fn_copy2, " ", &sv);
+  fptr = filesys_open(fn);
+  exist_flag = (fptr!=NULL);*/
+
   /* Create a new thread to execute FILE_NAME. */
+  /* Before creating, check exist_flag */
+  /*if (!exist_flag){
+      palloc_free_page (fn_copy);
+      return TID_ERROR;
+  }*/
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
 }
+
 
 /* A thread function that loads a user process and starts it
    running. */
@@ -53,6 +70,9 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  //int args_cnt = 0, total_length = 0, esp_, idx;
+  //char *parsed, *token, *save_ptr;
+
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -61,6 +81,36 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   /* TODO 
      Parsing, push argument in stack frame, change ESP correctly */
+/* WRONG
+   esp_ = if_.esp = PHYS_BASE;
+  {
+      parsed = file_name;
+      for (token = strtok_r (parsed, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+          args_cnt++;
+          if (args_cnt>1){
+              total_length += strlen(token) + 1;
+          }
+          else file_name = token;
+      }
+      esp_ -= total_length;
+      if_.esp -= total_length;
+
+      args_cnt = 0;
+      parsed = file_name;
+      for (token = strtok_r (parsed, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+          args_cnt++;
+          if (args_cnt>1){ // esp_ ~ [ esp_ + strlen(token) ]
+              for (idx = 0;idx < strlen(token);idx++){
+                  *esp_ = token[idx];
+                  esp_ ++;
+              }
+              *esp_ = '\0';
+              esp_ ++;
+          }
+      }
+  }
+*/
+  
   success = load (file_name, &if_.eip, &if_.esp);
 
 
