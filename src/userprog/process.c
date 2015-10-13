@@ -188,7 +188,7 @@ process_wait (tid_t child_tid UNUSED)
           sema_down(&(cur->p_sema));
           newCl->living_flag=0;
           
-          set_level(level);
+          intr_set_level(level);
           
           cur->wait_flag=0;
           newCl->living_flag=0;
@@ -198,9 +198,8 @@ process_wait (tid_t child_tid UNUSED)
           
           free(newCl);
       }
-    
-  return result;
   }
+  return result;
 }
 
 /* Free the current process's resources. */
@@ -325,7 +324,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
-  int i;
+  int i, j, testing = 0, argc = 0;
+  char *fn, *sv, *args[105];
+  for (i=0;i<100;i++)
+      args[i] = (char*)malloc(105);
+  fn = (char*)malloc(105);
+
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -334,13 +338,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  fn = strtok_r(file_name, " ", &sv);
+  file = filesys_open (fn);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-
+  t->file_name = fn;
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -416,6 +421,36 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
+
+  strlcpy(args[argc++],fn,strlen(fn)+1);
+  while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
+      strlcpy(args[argc++],fn,strlen(fn)+1);
+  for (i=argc-1;i>=0;i--){
+      int len=strlen(args[i])+1; // '\0' inserted
+      *esp -= len;
+      strlcpy((char*)*esp, args[i], len);
+  }
+
+  if (*(unsigned*)esp % 4 != 0) *esp-=*(unsigned*)esp%4;
+  *esp -= 4;
+  *(unsigned*)*esp = 0;
+  unsigned pointer = (unsigned)PHYS_BASE; // 0xc0000000
+  for (i=argc-1;i>=0;i--){
+      *esp-=4;
+      pointer -= strlen(args[i])+1;
+      *(unsigned*)*esp=pointer;
+  }
+
+  *esp -= 4;
+  *(unsigned*)*esp = *esp + 4;
+
+  *esp -= 4;
+  *(unsigned*)*esp = argc;
+
+  *esp -= 4;
+  *(unsigned*)*esp = 0;
+    
+
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -534,6 +569,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       upage += PGSIZE;
     }
   return true;
+}
+
+void t_remove(struct child_list* target){
+    target->living_flag = 0;
+    target->run_flag = false;
+    list_remove(&(target->elem));
+    free(target);
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of
