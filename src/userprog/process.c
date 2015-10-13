@@ -30,10 +30,12 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   char *fn, *sv;
-  char fn_copy2[PGSIZE+5];
+  char fn_copy2[100];
   struct file *fptr = NULL;
   bool exist_flag = true;
   tid_t tid;
+
+  struct thread *cur = thread_current();
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -44,17 +46,17 @@ process_execute (const char *file_name)
 
   /* TODO
      Check existence of file */
-  /*strlcpy(fn_copy2, file_name, strlen(file_name)+1);
+  strlcpy(fn_copy2, file_name, strlen(file_name)+1);
   fn = strtok_r(fn_copy2, " ", &sv);
   fptr = filesys_open(fn);
-  exist_flag = (fptr!=NULL);*/
+  exist_flag = (fptr!=NULL);
 
   /* Create a new thread to execute FILE_NAME. */
   /* Before creating, check exist_flag */
-  /*if (!exist_flag){
+  if (!exist_flag){
       palloc_free_page (fn_copy);
       return TID_ERROR;
-  }*/
+  }
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
@@ -141,7 +143,64 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  struct list_elem *e;
+  struct child_list *cl = NULL, *newCl = NULL;
+  struct thread *cur;
+  int child_flag = 0;
+  int result=-1;
+  enum intr_level level,t;
+
+  /* TODO
+     return -1
+     {
+       1. terminated by the kernel (i.e. killed due to an exception)
+       2. TID is invalid
+       3. TID was not a child of the calling process(current)
+       4. process_wait() has already been successfully called for the given TID
+     }
+     waiting
+     {
+       otherwise
+     }
+     */
+  cur = thread_current();
+  while (true){
+      e = list_begin(&cur->child);
+      while (true){
+          cl = list_entry(e, struct child_list, elem);
+          if (cl->tid == child_tid){
+              child_flag = 1;
+              break;
+          }
+          e = list_next(e);
+          if (e==list_end(&cur->child)) break;
+      }
+
+      if (child_flag!=-1) // 3. TID was not a child of the calling process(current)
+          return -1;
+
+      if (cur->wait_flag != 1){
+          cur->wait_flag = 1;
+          newCl = (struct child_list*)malloc(sizeof(struct child_list));
+          level = intr_disable();
+          sema_up(&(newCl->self->e_sema));
+          newCl->living_flag=1;
+          sema_down(&(cur->p_sema));
+          newCl->living_flag=0;
+          
+          set_level(level);
+          
+          cur->wait_flag=0;
+          newCl->living_flag=0;
+          newCl->run_flag = false;
+          result = newCl->exit_flag;
+          t_remove(newCl);
+          
+          free(newCl);
+      }
+    
+  return result;
+  }
 }
 
 /* Free the current process's resources. */

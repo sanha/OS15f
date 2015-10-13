@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -23,6 +24,9 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+
+/* Number of files */
+#define FILELIMIT 64
 
 /* A kernel thread or user process.
 
@@ -80,6 +84,21 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+
+struct child_list{
+    tid_t tid;
+    int exit_flag;
+    int living_flag;
+    bool run_flag;
+    struct list_elem elem;
+    struct thread *self;
+};
+
+struct t_file{
+    struct file* name;
+    bool open_flag;
+};
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -89,6 +108,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    struct file *fd[FILELIMIT];
+    int fd_cnt;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -98,10 +119,10 @@ struct thread
     int64_t wait_start;         /* wait started time */
     int64_t wait_length;            /* waiting length */
 
-	/* PRJ1: variables for priority donation. */
-	int priority_base;				/* at te end of donation, priority should be this one */
-	struct list lock_list;			/* list of lock it has */
-	struct lock *wait_lock;
+    /* PRJ1: variables for priority donation. */
+    int priority_base;              /* at te end of donation, priority should be this one */
+    struct list lock_list;          /* list of lock it has */
+    struct lock *wait_lock;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -110,6 +131,12 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+    struct semaphore sp;
+    struct thread* parent;
+    struct list child;
+    struct file* file_name;
+    struct semaphore p_sema;
+    struct semaphore e_sema;    
   };
 
 /* If false (default), use round-robin scheduler.
@@ -148,7 +175,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-bool less_wait ();			/* declaration of wait-queue less func. */
-bool big_ready ();		/* declaration of ready-queue less func. */
-void thread_sleep ();		/* declaration of thread sleep func. */
+bool less_wait ();          /* declaration of wait-queue less func. */
+bool big_ready ();      /* declaration of ready-queue less func. */
+void thread_sleep ();       /* declaration of thread sleep func. */
 #endif /* threads/thread.h */
