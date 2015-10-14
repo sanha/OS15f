@@ -53,10 +53,10 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   /* Before creating, check exist_flag */
-  if (!exist_flag){
+  /*if (!exist_flag){
       palloc_free_page (fn_copy);
       return TID_ERROR;
-  }
+  }*/
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
@@ -146,7 +146,7 @@ process_wait (tid_t child_tid UNUSED)
   struct list_elem *e;
   struct child_list *cl = NULL, *newCl = NULL;
   struct thread *cur;
-  int child_flag = 0;
+  int child_flag = -1;
   int result=-1;
   enum intr_level level,t;
 
@@ -163,8 +163,23 @@ process_wait (tid_t child_tid UNUSED)
        otherwise
      }
      */
-  cur = thread_current();
+  /*cur = thread_current();
   while (true){
+      child_flag = -1;
+      struct thread *child;
+      for (child = cur -> childrenPrev; child != cur; child = child->siblingNext)
+          if (child->tid == child_tid){
+              // TODO
+              //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
+              //   2) else sema_down(&(child->wait_sema))
+                
+          }
+      if (child == child->siblingNext)
+          break;
+      child = child->siblingNext;
+  }*/
+/*
+
       e = list_begin(&cur->child);
       while (true){
           cl = list_entry(e, struct child_list, elem);
@@ -176,10 +191,10 @@ process_wait (tid_t child_tid UNUSED)
           if (e==list_end(&cur->child)) break;
       }
 
-      if (child_flag!=-1) // 3. TID was not a child of the calling process(current)
+      if (child_flag==-1) // 3. TID was not a child of the calling process(current)
           return -1;
 
-      if (cur->wait_flag != 1){
+      if (cur->wait_flag != 1){  // not this wait_flag!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! stupid...
           cur->wait_flag = 1;
           newCl = (struct child_list*)malloc(sizeof(struct child_list));
           level = intr_disable();
@@ -198,7 +213,8 @@ process_wait (tid_t child_tid UNUSED)
           
           free(newCl);
       }
-  }
+  }*/
+  while(1);
   return result;
 }
 

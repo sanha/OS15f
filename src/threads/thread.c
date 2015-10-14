@@ -106,13 +106,6 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 
-  list_init( &(initial_thread->child));
-  sema_init( &(initial_thread->sp), 0);
-
-  for (i=0;i<FILELIMIT;i++)
-      initial_thread->fd[i] = NULL;
-  sema_init( &(initial_thread->p_sema), 0);
-  sema_init( &(initial_thread->e_sema), 0);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -208,7 +201,6 @@ thread_create (const char *name, int priority,
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
-  struct child_list *c = (struct child_list *)malloc(sizeof(struct child_list));
   tid_t tid;
 
   ASSERT (function != NULL);
@@ -236,18 +228,6 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
-  t->parent = thread_current();
-  c->exit_flag = 0;
-  c->tid = tid;
-  c->living_flag = 1;
-  c->self = t;
-  c->run_flag = 0;
-  list_push_front( &t->parent->child, &c->elem );
-  sema_init(&t->sp,0);
-
-  sema_init(&t->p_sema,0);
-  sema_init(&t->e_sema,0);
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -575,6 +555,7 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
+  int i;
   enum intr_level old_level;
 
   ASSERT (t != NULL);
@@ -588,7 +569,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-    /* PRJ1: initalizing wait variables */
+    /* PRJ1: initializing wait variables */
     t->wait_flag = false;
     t->wait_start = 0;
     t->wait_length = 0;
@@ -596,6 +577,26 @@ init_thread (struct thread *t, const char *name, int priority)
     t->priority_base = priority;
     list_init (&t->lock_list);
     t->wait_lock = NULL;
+
+    /* PRJ2: initializing file_name, wait_sema */
+    t->file_name = NULL;
+    sema_init(&(t->wait_sema),0);
+    for (i=0;i<FILELIMIT;i++)
+        initial_thread->fd[i] = NULL;
+    // construct relationship between parent, siblings
+    t->parent = thread_current();
+    t->childrenNext = t->childrenPrev = t;
+    if (t->parent->childrenNext == t->parent){ // This thread is first child.
+        t->parent->childrenNext = t->parent->childrenPrev = t;
+        t->siblingNext = t->siblingPrev = t;
+    }else{
+        t->siblingPrev = t->parent->childrenNext;
+        t->siblingPrev->siblingNext = t;
+        t->siblingNext = t;
+        t->parent->childrenNext = t;
+    }
+    t->file_name = NULL;
+    sema_init(&t->wait_sema,0);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

@@ -133,10 +133,13 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
     struct semaphore sp;
     struct thread* parent;
-    struct list child;
-    struct file* file_name;
-    struct semaphore p_sema;
-    struct semaphore e_sema;    
+    struct thread* childrenNext;         /* Younger child. If not exist, pointing itself. */
+    struct thread* childrenPrev;
+    struct thread* siblingNext;
+    struct thread* siblingPrev;
+    //struct list child;
+    struct file* file_name;             /* File name of itself. */
+    struct semaphore wait_sema;         /* Used at process_wait() for waiting semaphore. */
   };
 
 /* If false (default), use round-robin scheduler.
