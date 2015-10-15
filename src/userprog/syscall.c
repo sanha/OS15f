@@ -153,8 +153,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   int *esp = (int *)f->esp;
   // TODO <check esp is valid> 
   nsyscall = *(esp++);
-  printf ("system call!\n");
-  debugging(nsyscall);
+  //printf ("system call!\n");
+  //debugging(nsyscall);
   //thread_exit ();
   
     switch(nsyscall){
@@ -183,7 +183,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         case SYS_WRITE:
             get_args(f, &args[0], 3);
-            //printf("[0]:%d [1]:%s [2]:%d\n",args[0],args[1],args[2]);
+            printf("[0]:%d [1]:%s [2]:%d\n",args[0],args[1],args[2]);
             f->eax = s_write(args[0], (const void *)args[1], (unsigned) args[2]);
             break;
         case SYS_SEEK:

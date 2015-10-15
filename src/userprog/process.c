@@ -37,6 +37,8 @@ process_execute (const char *file_name)
 
   struct thread *cur = thread_current();
 
+  printf("original file_name in process_execute : %s\n",file_name);
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -188,7 +190,7 @@ process_wait (tid_t child_tid UNUSED)
           free(newCl);
       }
   }*/
-  while(1);
+//  while(1);
   return result;
 }
 
@@ -296,7 +298,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -406,7 +408,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, file_name))
     goto done; 
 
   /* Start address. */
@@ -538,12 +540,12 @@ void t_remove(struct child_list* target){
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *file_name) 
 {
   uint8_t *kpage;
   bool success = false;
   int i, j, testing = 0, argc = 0;
-  char *fn, *sv, *args[105];
+  char *fn, *sv, *args[105], fn_copy[105];
   for (i=0;i<100;i++)
       args[i] = (char*)malloc(105);
   fn = (char*)malloc(105);
@@ -560,9 +562,17 @@ setup_stack (void **esp)
       }
     }
 
-  strlcpy(args[argc++],fn,strlen(fn)+1);
+  printf("HERE setup_stack\n");
+
+  strlcpy(fn_copy, file_name, strlen(file_name)+1);
+  fn = strtok_r(fn_copy, " ", &sv);
+  strlcpy(args[argc++], fn, strlen(fn)+1);
+  //strlcpy(args[argc++],fn,strlen(fn)+1);
   while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
       strlcpy(args[argc++],fn,strlen(fn)+1);
+  printf("Come Here\n");
+  printf("argc: %d\n",argc);
+
   for (i=argc-1;i>=0;i--){
       int len=strlen(args[i])+1; // '\0' inserted
       *esp -= len;
