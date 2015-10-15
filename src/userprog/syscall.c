@@ -19,10 +19,14 @@
 #define MAX_ARGS 3
 #define USER_VADDR_BOTTOM ((void *)0x08048000)
 
+// lock of filesys resource
+struct lock filesys_lock;
+
 static void syscall_handler (struct intr_frame *);
 
 void ger_args(struct intr_frame*, int*, int);
 void is_valid_ptr (const void *vaddr);
+struct file* process_get_file (int fd);
 
 void
 syscall_init (void) 
@@ -53,8 +57,9 @@ void s_halt(void){
 }
 
 void s_exit(int status){
-    /* RHS suggestion
+    /* RHS suggestion*/
     struct thread *cur = thread_current();
+    /*
     if (cur->parent is alive){
         if (cur has no sibling){
             cur->parent->childrenNext = cur->parent->childrenPrev = cur->parent;
@@ -72,20 +77,37 @@ void s_exit(int status){
             }
         }
     }
-
-    sema_up(&cur->wait_sema);*/
+    */
+    char copy_name[16];
+    char *file_name, *sv;
+    strlcpy(copy_name, cur->name, strlen(cur->name)+1);
+    file_name = strtok_r(copy_name, " ", &sv);
+    printf("%s: exit(%d)\n",file_name, status);
+    sema_up(&cur->wait_sema);
         
     thread_exit();
 }
 
 int s_write(int fd, const void *buffer, unsigned size){
     int actual_size = size;
-    printf("s_write is called\n");
-    while ((char *)buffer!=0){
+    //printf("s_write is called\n");
+    if (fd == STDOUT_FILENO){
+        putbuf(buffer, size);
+        return size;
+    }
+    lock_acquire(&filesys_lock);
+    struct file *f = process_get_file(fd);
+    if (!f){
+        lock_release(&filesys_lock);
+        return -1; // ERROR
+    }
+    int bytes = file_write(f, buffer, size);
+    lock_release(&filesys_lock);
+    /*while ((char *)buffer!=0){
         printf("%c",(char *)buffer);
         buffer+=1;
-    }
-    return actual_size;
+    }*/
+    return bytes;
 }
 
 static void debugging(int syscall_type){
@@ -131,14 +153,14 @@ syscall_handler (struct intr_frame *f UNUSED)
   int *esp = (int *)f->esp;
   // TODO <check esp is valid> 
   nsyscall = *(esp++);
-  printf ("system call!\n");
-  debugging(nsyscall);
+  //printf ("system call!\n");
+  //debugging(nsyscall);
   //thread_exit ();
   
     switch(nsyscall){
         // Process-related
         case SYS_EXIT:
-            get_args(f,&args[0],1);
+            get_args(f,&args[0],2);
             s_exit(args[1]);
             break;
         case SYS_EXEC:
@@ -161,7 +183,8 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         case SYS_WRITE:
             get_args(f, &args[0], 3);
-            s_write(args[0], (const void *)args[1], (unsigned) args[2]);
+            //printf("[0]:%d [1]:%s [2]:%d\n",args[0],args[1],args[2]);
+            f->eax = s_write(args[0], (const void *)args[1], (unsigned) args[2]);
             break;
         case SYS_SEEK:
             break;
@@ -173,6 +196,18 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
     }
 }
+
+struct file* process_get_file (int fd){
+    struct thread *t = thread_current();
+    int i;
+    for (i=0;i<t->fd_cnt;i++){
+        if (t->fd[i] == fd){
+            return t->file_list[i];
+        }
+    }
+    return NULL;
+}
+    
 
 void get_args(struct intr_frame *f, int *args, int argc){
     int i, *ptr;

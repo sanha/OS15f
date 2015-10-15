@@ -248,9 +248,10 @@ thread_create (const char *name, int priority,
   /* PRJ2 : initialize file description, wait_sema */
   t->file_name = NULL;
   sema_init(&(t->wait_sema),0);
-  for (i=0;i<FILELIMIT;i++)
-      initial_thread->fd[i] = NULL;
-
+  for (i=0;i<FILELIMIT;i++){
+      initial_thread->file_list[i] = NULL;
+      initial_thread->fd[i] = 0;
+  }
   return tid;
 }
 

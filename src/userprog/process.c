@@ -163,7 +163,7 @@ process_wait (tid_t child_tid UNUSED)
        otherwise
      }
      */
-  /*cur = thread_current();
+  cur = thread_current();
   while (true){
       child_flag = -1;
       struct thread *child;
@@ -172,16 +172,16 @@ process_wait (tid_t child_tid UNUSED)
               // TODO
               //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
               //   2) else sema_down(&(child->wait_sema))
-              if (child->status == THREAD_ZOMBIE){
-                  ~~
-              }else{
+              //if (child->status == THREAD_ZOMBIE){
+              //    
+              //}else{
                   sema_down(&(child->wait_sema));
-              }
+              //}
           }
       if (child == child->siblingNext)
           break;
       child = child->siblingNext;
-  }*/
+  }
 /*
 
       e = list_begin(&cur->child);
@@ -218,7 +218,7 @@ process_wait (tid_t child_tid UNUSED)
           free(newCl);
       }
   }*/
-  while(1);
+//  while(1);
   return result;
 }
 
@@ -442,6 +442,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
+/* WRONG PLACE
   strlcpy(args[argc++],fn,strlen(fn)+1);
   while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
       strlcpy(args[argc++],fn,strlen(fn)+1);
@@ -468,7 +469,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *(unsigned*)*esp = argc;
 
   *esp -= 4;
-  *(unsigned*)*esp = 0;
+  *(unsigned*)*esp = 0;*/
     
 
 
@@ -584,7 +585,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         }
 
       /* Advance. */
-      read_bytes -= page_read_bytes;
+     read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
     }
