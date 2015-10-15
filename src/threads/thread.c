@@ -738,3 +738,27 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+void set_hierarchy_delete(){
+    struct thread *cur = thread_current();
+
+    if (cur->siblingNext == cur && cur->siblingPrev == cur){ // no sibling
+        cur->parent->childrenNext = cur->parent->childrenPrev = cur->parent;
+    }else if (cur->siblingNext == cur){
+        cur->parent->childrenNext = cur->siblingPrev;
+        cur->siblingPrev->siblingNext = cur->siblingPrev;
+    }else if (cur->siblingPrev == cur){
+        cur->parent->childrenPrev = cur->siblingNext;
+        cur->siblingNext->siblingPrev = cur->siblingNext;
+    }else{
+        cur->siblingNext->siblingPrev = cur->siblingPrev;
+        cur->siblingPrev->siblingNext = cur->siblingNext;
+    }
+}
+
+void set_hierarchy_addition(struct thread* target_child){
+    struct thread *target_parent = idle_thread;
+    target_child->siblingNext = target_parent->childrenPrev;
+    target_parent->childrenPrev->siblingPrev = target_child;
+    target_parent->childrenPrev = target_child;
+}

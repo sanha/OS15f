@@ -51,6 +51,7 @@ void s_seek(int fd, unsigned position);
 unsigned s_tell(int fd);
 void s_close(int fd);
 
+
 void s_halt(void){
     //power_off();
     shutdown_power_off();
@@ -59,35 +60,42 @@ void s_halt(void){
 void s_exit(int status){
     /* RHS suggestion*/
     struct thread *cur = thread_current();
-    /*
-    if (cur->parent is alive){
-        if (cur has no sibling){
-            cur->parent->childrenNext = cur->parent->childrenPrev = cur->parent;
-        }
-        else{ // cur has siblings
-            if (cur is NextMost sibling){ // cur->parent->childrenNext == cur
-                cur->parent->childrenNext = cur->siblingPrev;
-                cur->siblingPrev->siblingNext = cur->siblingPrev;
-            }else if (cur is PrevMost sibling){ // cur->parent->childrenPrev == cur
-                cur->parent->childrenPrev = cur->siblingNext;
-                cur->siblingNext->siblingPrev = cur->siblingNext;
-            }else{
-                cur->siblingNext->siblingPrev = cur->siblingPrev;
-                cur->siblingPrev->siblingNext = cur->siblingNext;
-            }
-        }
-    }
 
-    */
+    /* TODO
+       1. close every file -> file_close()
+       2. delete myself
+       3. every child connect to idle thread
+       4. sema_up wait_sema                        // Clear
+       */
+
+    // 1.
+
+    // 3.
+    struct thread* child = cur->childrenNext;
+    while (child!=cur){
+        set_hierarchy_addition(child);
+        if (child->siblingPrev == child)
+            break;
+        child = child->siblingPrev;
+    }
+    
+
+    // 2.
+    set_hierarchy_delete(); // delete myself
+
+ 
     char copy_name[16];
     char *file_name, *sv;
     strlcpy(copy_name, cur->name, strlen(cur->name)+1);
     file_name = strtok_r(copy_name, " ", &sv);
     printf("%s: exit(%d)\n",file_name, status);
+ 
+    // 4.
     sema_up(&cur->wait_sema);
-        
     thread_exit();
 }
+
+
 
 
 int s_write(int fd, const void *buffer, unsigned size){

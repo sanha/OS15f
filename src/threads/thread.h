@@ -186,5 +186,7 @@ void thread_sleep ();       /* declaration of thread sleep func. */
 /* PRJ2 */
 bool noChild(struct thread *t);
 bool onlyChild(struct thread *t);
+void set_hierarchy_delete();
+void set_hierarchy_addition(struct thread*);
 
 #endif /* threads/thread.h */
