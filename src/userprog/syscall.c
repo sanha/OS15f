@@ -153,8 +153,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   int *esp = (int *)f->esp;
   // TODO <check esp is valid> 
   nsyscall = *(esp++);
-  //printf ("system call!\n");
-  //debugging(nsyscall);
+  printf ("system call!\n");
+  debugging(nsyscall);
   //thread_exit ();
   
     switch(nsyscall){

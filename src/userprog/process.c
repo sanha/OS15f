@@ -57,7 +57,7 @@ process_execute (const char *file_name)
       palloc_free_page (fn_copy);
       return TID_ERROR;
   }*/
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy); // (void *)fn_copy
+  tid = thread_create (fn, PRI_DEFAULT, start_process, fn_copy); // (void *)fn_copy
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -73,7 +73,9 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
   //int args_cnt = 0, total_length = 0, esp_, idx;
-  //char *parsed, *token, *save_ptr;
+  //char *parsed, *token;
+  char *save_ptr;
+  file_name = strtok_r(file_name, " ", &save_ptr);
 
 
   /* Initialize interrupt frame and load executable. */
@@ -81,40 +83,8 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  /* TODO 
-     Parsing, push argument in stack frame, change ESP correctly */
-/* WRONG
-   esp_ = if_.esp = PHYS_BASE;
-  {
-      parsed = file_name;
-      for (token = strtok_r (parsed, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
-          args_cnt++;
-          if (args_cnt>1){
-              total_length += strlen(token) + 1;
-          }
-          else file_name = token;
-      }
-      esp_ -= total_length;
-      if_.esp -= total_length;
-
-      args_cnt = 0;
-      parsed = file_name;
-      for (token = strtok_r (parsed, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
-          args_cnt++;
-          if (args_cnt>1){ // esp_ ~ [ esp_ + strlen(token) ]
-              for (idx = 0;idx < strlen(token);idx++){
-                  *esp_ = token[idx];
-                  esp_ ++;
-              }
-              *esp_ = '\0';
-              esp_ ++;
-          }
-      }
-  }
-*/
-  
+ 
   success = load (file_name, &if_.eip, &if_.esp);
-
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -218,7 +188,7 @@ process_wait (tid_t child_tid UNUSED)
           free(newCl);
       }
   }*/
-//  while(1);
+  while(1);
   return result;
 }
 
@@ -344,11 +314,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
-  int i, j, testing = 0, argc = 0;
-  char *fn, *sv, *args[105];
-  for (i=0;i<100;i++)
-      args[i] = (char*)malloc(105);
-  fn = (char*)malloc(105);
+  char *sv, *fn;
+  int i;
 
 
   /* Allocate and activate page directory. */
@@ -440,38 +407,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Set up stack. */
   if (!setup_stack (esp))
-    goto done;
-
-/* WRONG PLACE
-  strlcpy(args[argc++],fn,strlen(fn)+1);
-  while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
-      strlcpy(args[argc++],fn,strlen(fn)+1);
-  for (i=argc-1;i>=0;i--){
-      int len=strlen(args[i])+1; // '\0' inserted
-      *esp -= len;
-      strlcpy((char*)*esp, args[i], len);
-  }
-
-  if (*(unsigned*)esp % 4 != 0) *esp-=*(unsigned*)esp%4;
-  *esp -= 4;
-  *(unsigned*)*esp = 0;
-  unsigned pointer = (unsigned)PHYS_BASE; // 0xc0000000
-  for (i=argc-1;i>=0;i--){
-      *esp-=4;
-      pointer -= strlen(args[i])+1;
-      *(unsigned*)*esp=pointer;
-  }
-
-  *esp -= 4;
-  *(unsigned*)*esp = *esp + 4;
-
-  *esp -= 4;
-  *(unsigned*)*esp = argc;
-
-  *esp -= 4;
-  *(unsigned*)*esp = 0;*/
-    
-
+    goto done; 
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -606,6 +542,11 @@ setup_stack (void **esp)
 {
   uint8_t *kpage;
   bool success = false;
+  int i, j, testing = 0, argc = 0;
+  char *fn, *sv, *args[105];
+  for (i=0;i<100;i++)
+      args[i] = (char*)malloc(105);
+  fn = (char*)malloc(105);
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
@@ -613,10 +554,42 @@ setup_stack (void **esp)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
         *esp = PHYS_BASE;
-      else
+      else{
         palloc_free_page (kpage);
+        return false;
+      }
     }
+
+  strlcpy(args[argc++],fn,strlen(fn)+1);
+  while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
+      strlcpy(args[argc++],fn,strlen(fn)+1);
+  for (i=argc-1;i>=0;i--){
+      int len=strlen(args[i])+1; // '\0' inserted
+      *esp -= len;
+      strlcpy((char*)*esp, args[i], len);
+  }
+
+  if (*(unsigned*)esp % 4 != 0) *esp-=*(unsigned*)esp%4;
+  *esp -= 4;
+  *(unsigned*)*esp = 0;
+  unsigned pointer = (unsigned)PHYS_BASE; // 0xc0000000
+  for (i=argc-1;i>=0;i--){
+      *esp-=4;
+      pointer -= strlen(args[i])+1;
+      *(unsigned*)*esp=pointer;
+  }
+
+  *esp -= 4;
+  *(unsigned*)*esp = *esp + 4;
+
+  *esp -= 4;
+  *(unsigned*)*esp = argc;
+
+  *esp -= 4;
+  *(unsigned*)*esp = 0;
+
   return success;
+  
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
