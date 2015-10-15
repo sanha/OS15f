@@ -2,7 +2,7 @@
 
 # Root directory which has /src as its child 
 #export PINTOS_DIR='/home/sp/PintosUserProgram/pintos'
-export PINTOS_DIR='/home/sp/Team03'
+export PINTOS_DIR='/home/ryu/Team03'
 
 # USED emulator. 'bochs'(Project1) or 'qmenu'(Project2,3,4)
 export TEST_EMUL='bochs'
@@ -14,7 +14,7 @@ export PINTOS_PRJ='userprog'
 export TEST_DIR='userprog'
 
 # Test item
-export TEST_ITEM='open-missing'
+export TEST_ITEM='args-single'
 
 # Additional test file like 'child-simple' 'tar' ...
 export ADD_TEST_FILE='child-simple'
@@ -59,4 +59,6 @@ alias copyadd='pintos -p tests/$TEST_DIR/$ADD_TEST_FILE -a $ADD_TEST_FILE -- -q'
 alias copysample='pintos -p ../../tests/$TEST_DIR/sample.txt -a sample.txt -- -q'
 alias debugcopy='pintos -p tests/$TEST_DIR/$TEST_ITEM -a $TEST_ITEM --gdb --$TEST_EMUL -- -f -q'
 alias debugtar='pintos --$TEST_EMUL --gdb -- -q run "tar fs.tar /"'
-alias test='pintos -v -k -T 5 --bochs --filesys-size=2 -p tests/userprog/$TEST_ITEM -a TEST_ITEM -- -q -f run TEST_ITEM'
+alias testitem='pintos -v -k -T 5 --bochs --filesys-size=2 -p tests/userprog/$TEST_ITEM -a TEST_ITEM -- -q -f run TEST_ITEM'
+alias testitem2='pintos -T 5 --bochs --filesys-size=2 -p tests/userprog/$TEST_ITEM -a $TEST_ITEM -- -q -f run $TEST_ITEM'
+alias auto="cd $PINTOS_DIR/src/$PINTOS_PRJ; make clean; make; gop; makedisk; formatdisk; pintos -p ../../examples/echo -a echo -- -q ; pintos -q run 'echo x'"
