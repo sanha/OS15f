@@ -55,11 +55,12 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   /* Before creating, check exist_flag */
-  /*if (!exist_flag){
+  if (!exist_flag){
       palloc_free_page (fn_copy);
       return TID_ERROR;
-  }*/
-  tid = thread_create (fn, PRI_DEFAULT, start_process, fn_copy); // (void *)fn_copy
+  }
+
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy); // (void *)fn_copy
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -74,11 +75,8 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-  //int args_cnt = 0, total_length = 0, esp_, idx;
-  //char *parsed, *token;
   char *save_ptr;
-  file_name = strtok_r(file_name, " ", &save_ptr);
-
+  //printf("@ start_process, file_name : %s\n",file_name);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -136,61 +134,25 @@ process_wait (tid_t child_tid UNUSED)
      }
      */
   cur = thread_current();
-  while (true){
-      child_flag = -1;
-      struct thread *child;
-      for (child = cur -> childrenPrev; child != cur; child = child->siblingNext)
-          if (child->tid == child_tid){
-              // TODO
-              //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
-              //   2) else sema_down(&(child->wait_sema))
-              //if (child->status == THREAD_ZOMBIE){
-              //    
-              //}else{
-                  sema_down(&(child->wait_sema));
-              //}
-          }
+  child_flag = -1;
+  struct thread *child;
+  for (child = cur -> childrenPrev; child != cur;){
+      if (child->tid == child_tid){
+          // TODO
+          //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
+          //   2) else sema_down(&(child->wait_sema))
+          //if (child->status == THREAD_ZOMBIE){
+          //    
+          //}else{
+              // waiting for child_tid
+              sema_down(&(child->wait_sema));
+          //}
+      }
       if (child == child->siblingNext)
           break;
       child = child->siblingNext;
   }
-/*
-
-      e = list_begin(&cur->child);
-      while (true){
-          cl = list_entry(e, struct child_list, elem);
-          if (cl->tid == child_tid){
-              child_flag = 1;
-              break;
-          }
-          e = list_next(e);
-          if (e==list_end(&cur->child)) break;
-      }
-
-      if (child_flag==-1) // 3. TID was not a child of the calling process(current)
-          return -1;
-
-      if (cur->wait_flag != 1){  // not this wait_flag!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! stupid...
-          cur->wait_flag = 1;
-          newCl = (struct child_list*)malloc(sizeof(struct child_list));
-          level = intr_disable();
-          sema_up(&(newCl->self->e_sema));
-          newCl->living_flag=1;
-          sema_down(&(cur->p_sema));
-          newCl->living_flag=0;
-          
-          intr_set_level(level);
-          
-          cur->wait_flag=0;
-          newCl->living_flag=0;
-          newCl->run_flag = false;
-          result = newCl->exit_flag;
-          t_remove(newCl);
-          
-          free(newCl);
-      }
-  }*/
-//  while(1);
+  result = 1;
   return result;
 }
 
@@ -314,10 +276,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
+  char fn_copy[105];
   off_t file_ofs;
   bool success = false;
   char *sv, *fn;
   int i;
+
+  strlcpy(fn_copy, file_name, strlen(file_name)+1);
 
 
   /* Allocate and activate page directory. */
@@ -408,7 +373,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp, file_name))
+  if (!setup_stack (esp, fn_copy))
     goto done; 
 
   /* Start address. */
@@ -562,17 +527,13 @@ setup_stack (void **esp, char *file_name)
       }
     }
 
-  printf("HERE setup_stack\n");
-  printf("@ setup_stack, file_name : %s\n",file_name);
+  //printf("@ setup_stack, file_name : %s\n",file_name);
 
   strlcpy(fn_copy, file_name, strlen(file_name)+1);
   fn = strtok_r(fn_copy, " ", &sv);
   strlcpy(args[argc++], fn, strlen(fn)+1);
-  printf("@ setup_stack, file_name after parsing argv[0] : %s\n",fn);
-  //strlcpy(args[argc++],fn,strlen(fn)+1);
   while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
       strlcpy(args[argc++],fn,strlen(fn)+1);
-  printf("argc: %d\n",argc);
 
   for (i=argc-1;i>=0;i--){
       int len=strlen(args[i])+1; // '\0' inserted
@@ -590,14 +551,17 @@ setup_stack (void **esp, char *file_name)
       *(unsigned*)*esp=pointer;
   }
 
+  // Push pointer to *args[0]
   *esp -= 4;
   *(unsigned*)*esp = *esp + 4;
 
+  // Push argc
   *esp -= 4;
   *(unsigned*)*esp = argc;
 
+  // Push return address
   *esp -= 4;
-  *(unsigned*)*esp = 0;
+  *(unsigned*)*esp = 0; // Phys_Mem = 0 <-> Virt_Mem = 0xc0000000
 
   return success;
   

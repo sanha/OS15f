@@ -164,7 +164,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         // Process-related
         case SYS_EXIT:
             get_args(f,&args[0],2);
-            s_exit(args[1]);
+            s_exit(args[1]); // args[1] for exit_status
             break;
         case SYS_EXEC:
             break;
@@ -185,8 +185,8 @@ syscall_handler (struct intr_frame *f UNUSED)
         case SYS_READ:
             break;
         case SYS_WRITE:
+            // read file_description, buffer, size
             get_args(f, &args[0], 3);
-            printf("[0]:%d [1]:%s [2]:%d\n",args[0],args[1],args[2]);
             f->eax = s_write(args[0], (const void *)args[1], (unsigned) args[2]);
             break;
         case SYS_SEEK:
@@ -200,6 +200,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
 }
 
+// Return file pointer for certain fd
 struct file* process_get_file (int fd){
     struct thread *t = thread_current();
     int i;
@@ -211,7 +212,7 @@ struct file* process_get_file (int fd){
     return NULL;
 }
     
-
+// Get args (args count) from stack, and save it in *args
 void get_args(struct intr_frame *f, int *args, int argc){
     int i, *ptr;
     for (i=1;i<=argc;i++){

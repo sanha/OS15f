@@ -337,7 +337,7 @@ run_actions (char **argv)
           PANIC ("action `%s' requires %d argument(s)", *argv, a->argc - 1);
 
       /* Invoke action and advance. */
-      printf("@ run_action, argv[0] : %s, argv[1]: %s, argv[2]: %s\n",*argv, *(argv+1), *(argv+2));
+      //printf("@ run_action, argv[0] : %s, argv[1]: %s, argv[2]: %s\n",*argv, *(argv+1), *(argv+2));
       a->function (argv);
       argv += a->argc;
     }
