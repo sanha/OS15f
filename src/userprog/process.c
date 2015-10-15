@@ -57,7 +57,7 @@ process_execute (const char *file_name)
       palloc_free_page (fn_copy);
       return TID_ERROR;
   }*/
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy); // (void *)fn_copy
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -172,7 +172,11 @@ process_wait (tid_t child_tid UNUSED)
               // TODO
               //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
               //   2) else sema_down(&(child->wait_sema))
-                
+              if (child->status == THREAD_ZOMBIE){
+                  ~~
+              }else{
+                  sema_down(&(child->wait_sema));
+              }
           }
       if (child == child->siblingNext)
           break;

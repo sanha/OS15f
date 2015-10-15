@@ -20,6 +20,7 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details */
 #define THREAD_MAGIC 0xcd6abf4b
+#define ROOT -1
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running */
@@ -105,7 +106,6 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -201,6 +201,7 @@ thread_create (const char *name, int priority,
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
+  int i;
   tid_t tid;
 
   ASSERT (function != NULL);
@@ -232,7 +233,33 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /* PRJ2 : add thread to parent */
+  struct thread *cur = thread_current();
+  t->parent = cur;
+  if (noChild(cur)){
+      cur->childrenNext = cur->childrenPrev = t;
+      t->siblingNext = t->siblingPrev = t;
+  }else{
+      t->siblingNext = cur->childrenPrev;
+      cur->childrenPrev->siblingPrev = t;
+      cur->childrenPrev = t;
+  }
+
+  /* PRJ2 : initialize file description, wait_sema */
+  t->file_name = NULL;
+  sema_init(&(t->wait_sema),0);
+  for (i=0;i<FILELIMIT;i++)
+      initial_thread->fd[i] = NULL;
+
   return tid;
+}
+
+bool noChild(struct thread *t){
+    return (t->childrenNext == t) || (t->childrenNext==NULL);
+}
+
+bool onlyChild(struct thread *t){
+    return (t->childrenNext == t->childrenPrev) && (t->childrenNext !=t);
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -584,17 +611,6 @@ init_thread (struct thread *t, const char *name, int priority)
     for (i=0;i<FILELIMIT;i++)
         initial_thread->fd[i] = NULL;
     // construct relationship between parent, siblings
-    t->parent = thread_current();
-    t->childrenNext = t->childrenPrev = t;
-    if (t->parent->childrenNext == t->parent){ // This thread is first child.
-        t->parent->childrenNext = t->parent->childrenPrev = t;
-        t->siblingNext = t->siblingPrev = t;
-    }else{
-        t->siblingPrev = t->parent->childrenNext;
-        t->siblingPrev->siblingNext = t;
-        t->siblingNext = t;
-        t->parent->childrenNext = t;
-    }
     t->file_name = NULL;
     sema_init(&t->wait_sema,0);
 
