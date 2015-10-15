@@ -563,14 +563,15 @@ setup_stack (void **esp, char *file_name)
     }
 
   printf("HERE setup_stack\n");
+  printf("@ setup_stack, file_name : %s\n",file_name);
 
   strlcpy(fn_copy, file_name, strlen(file_name)+1);
   fn = strtok_r(fn_copy, " ", &sv);
   strlcpy(args[argc++], fn, strlen(fn)+1);
+  printf("@ setup_stack, file_name after parsing argv[0] : %s\n",fn);
   //strlcpy(args[argc++],fn,strlen(fn)+1);
   while ((fn=strtok_r(NULL, " ", &sv))!=NULL)
       strlcpy(args[argc++],fn,strlen(fn)+1);
-  printf("Come Here\n");
   printf("argc: %d\n",argc);
 
   for (i=argc-1;i>=0;i--){

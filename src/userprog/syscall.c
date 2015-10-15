@@ -77,6 +77,7 @@ void s_exit(int status){
             }
         }
     }
+
     */
     char copy_name[16];
     char *file_name, *sv;
@@ -87,6 +88,7 @@ void s_exit(int status){
         
     thread_exit();
 }
+
 
 int s_write(int fd, const void *buffer, unsigned size){
     int actual_size = size;
@@ -123,6 +125,7 @@ static void debugging(int syscall_type){
             printf("SYS_WAIT!\n"); break;
         // File-related
         case SYS_CREATE:
+
             printf("SYS_CREATE!\n"); break;
         case SYS_REMOVE:
             printf("SYS_REMOVE!\n"); break;
