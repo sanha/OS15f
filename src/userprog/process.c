@@ -146,13 +146,13 @@ process_wait (tid_t child_tid UNUSED)
           //}else{
               // waiting for child_tid
               sema_down(&(child->wait_sema));
+			  result = cur->exit_status;
           //}
       }
       if (child == child->siblingNext)
           break;
       child = child->siblingNext;
   }
-  result = 1;
   return result;
 }
 

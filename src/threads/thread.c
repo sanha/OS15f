@@ -610,10 +610,8 @@ init_thread (struct thread *t, const char *name, int priority)
     t->file_name = NULL;
     sema_init(&(t->wait_sema),0);
     for (i=0;i<FILELIMIT;i++)
-        initial_thread->fd[i] = NULL;
-    // construct relationship between parent, siblings
-    t->file_name = NULL;
-    sema_init(&t->wait_sema,0);
+        t->fd[i] = NULL;
+	t->exit_status = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

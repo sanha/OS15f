@@ -95,7 +95,17 @@ void s_exit(int status){
     thread_exit();
 }
 
-
+int s_wait(pid_t pid){
+	struct thread *cur = thread_current();
+	struct thread *child = cur->childrenNext;
+	while (child!=cur) {
+		if (child->tid == pid) {
+			return process_wait(pid);
+		}
+		else child = child->siblingPrev;
+	}
+	return -1;
+}
 
 
 int s_write(int fd, const void *buffer, unsigned size){
@@ -171,8 +181,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     switch(nsyscall){
         // Process-related
         case SYS_EXIT:
-            get_args(f,&args[0],2);
-            s_exit(args[1]); // args[1] for exit_status
+            get_args(f,&args[0],1);
+            s_exit(args[0]); // args[0] for exit_status
             break;
         case SYS_EXEC:
             break;
@@ -180,6 +190,8 @@ syscall_handler (struct intr_frame *f UNUSED)
             s_halt();
             break;
         case SYS_WAIT:
+			get_args(f,&args[0],1);
+			s_wait(args[0]);
             break;
         // File-related
         case SYS_CREATE:
