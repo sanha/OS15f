@@ -95,7 +95,14 @@ void s_exit(int status){
     thread_exit();
 }
 
+pid_t s_exec(const char *cmd_line){
+	pid_t pid;
 
+	pid = process_execute(cmd_line);
+
+	if(pid == TID_ERROR) return PID_ERROR;
+	else pid;
+}
 
 
 int s_write(int fd, const void *buffer, unsigned size){
@@ -171,10 +178,12 @@ syscall_handler (struct intr_frame *f UNUSED)
     switch(nsyscall){
         // Process-related
         case SYS_EXIT:
-            get_args(f,&args[0],2);
-            s_exit(args[1]); // args[1] for exit_status
+            get_args(f,&args[0], 1);
+            s_exit(args[0]);
             break;
         case SYS_EXEC:
+			get_args(f, &args[0], 1);
+			f->eax = s_exec(args[0]);
             break;
         case SYS_HALT:
             s_halt();
