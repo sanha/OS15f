@@ -26,6 +26,7 @@ static void syscall_handler (struct intr_frame *);
 
 void ger_args(struct intr_frame*, int*, int);
 void is_valid_ptr (const void *vaddr);
+void is_valid_buffer (void *, unsigned);
 struct file* process_get_file (int fd);
 
 void
@@ -90,6 +91,7 @@ void s_exit(int status){
     file_name = strtok_r(copy_name, " ", &sv);
     printf("%s: exit(%d)\n",file_name, status);
  
+	cur->parent->exit_status = status;
     // 4.
     sema_up(&cur->wait_sema);
     thread_exit();
@@ -102,7 +104,10 @@ int s_wait(pid_t pid){
 		if (child->tid == pid) {
 			return process_wait(pid);
 		}
-		else child = child->siblingPrev;
+		else {
+			if (child == child->siblingPrev) return -1;
+			child = child->siblingPrev;
+		}
 	}
 	return -1;
 }
@@ -124,6 +129,7 @@ int s_write(int fd, const void *buffer, unsigned size){
         putbuf(buffer, size);
         return size;
     }
+	//printf("WOW\n");
     lock_acquire(&filesys_lock);
     struct file *f = process_get_file(fd);
     if (!f){
@@ -203,7 +209,7 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         case SYS_WAIT:
 			get_args(f,&args[0],1);
-			s_wait(args[0]);
+			f->eax = s_wait(args[0]);
             break;
         // File-related
         case SYS_CREATE:
@@ -219,6 +225,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         case SYS_WRITE:
             // read file_description, buffer, size
             get_args(f, &args[0], 3);
+			is_valid_buffer((void *) args[1], (unsigned) args[2]);
             f->eax = s_write(args[0], (const void *)args[1], (unsigned) args[2]);
             break;
         case SYS_SEEK:
@@ -252,6 +259,14 @@ void get_args(struct intr_frame *f, int *args, int argc){
         is_valid_ptr((const void *)ptr);
         args[i-1] = *ptr;
     }
+}
+
+void is_valid_buffer(void *buf, unsigned size){
+	int i;
+	char *cbuf = (char *)buf;
+	for (i=0;i<size;i++){
+		is_valid_ptr(cbuf++);
+	}
 }
 
 void is_valid_ptr(const void *vaddr){
