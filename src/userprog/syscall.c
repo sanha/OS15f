@@ -195,7 +195,8 @@ syscall_handler (struct intr_frame *f UNUSED)
             break;
         case SYS_EXEC:
 			get_args(f, &args[0], 1);
-			f->eax = s_exec(args[0]);
+			is_valid_ptr((const void *) args[0]);
+			f->eax = s_exec((const char *)args[0]);
             break;
         case SYS_HALT:
             s_halt();
@@ -258,4 +259,8 @@ void is_valid_ptr(const void *vaddr){
         s_exit(ERROR);
     if (vaddr < USER_VADDR_BOTTOM) // 0x08048000
         s_exit(ERROR);
+
+	void *p = pagedir_get_page(thread_current()->pagedir, vaddr);
+	if(!p) {s_exit(ERROR);}
+	return (int) p;
 }

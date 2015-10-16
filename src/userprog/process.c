@@ -37,7 +37,7 @@ process_execute (const char *file_name)
 
   struct thread *cur = thread_current();
 
-  printf("original file_name in process_execute : %s\n",file_name);
+  //printf("original file_name in process_execute : %s\n",file_name);
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
