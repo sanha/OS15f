@@ -147,6 +147,7 @@ process_wait (tid_t child_tid UNUSED)
               // waiting for child_tid
               sema_down(&(child->wait_sema));
 			  result = cur->exit_status;
+			  break;
           //}
       }
       if (child == child->siblingNext)

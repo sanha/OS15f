@@ -241,9 +241,11 @@ thread_create (const char *name, int priority,
       t->siblingNext = t->siblingPrev = t;
   }else{
       t->siblingNext = cur->childrenPrev;
+	  t->siblingPrev = t;
       cur->childrenPrev->siblingPrev = t;
       cur->childrenPrev = t;
   }
+  t->childrenNext = t->childrenPrev = t;
 
   /* PRJ2 : initialize file description, wait_sema */
   t->file_name = NULL;
@@ -757,6 +759,7 @@ void set_hierarchy_delete(){
 void set_hierarchy_addition(struct thread* target_child){
     struct thread *target_parent = idle_thread;
     target_child->siblingNext = target_parent->childrenPrev;
+	target_child->siblingPrev = target_child;
     target_parent->childrenPrev->siblingPrev = target_child;
     target_parent->childrenPrev = target_child;
 }

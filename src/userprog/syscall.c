@@ -254,8 +254,8 @@ void get_args(struct intr_frame *f, int *args, int argc){
 }
 
 void is_valid_ptr(const void *vaddr){
-    if (!is_user_vaddr(vaddr));
-        //exit(ERROR);
-    if (vaddr < USER_VADDR_BOTTOM); // 0x08048000
-        //exit(ERROR);
+    if (!is_user_vaddr(vaddr))
+        s_exit(ERROR);
+    if (vaddr < USER_VADDR_BOTTOM) // 0x08048000
+        s_exit(ERROR);
 }

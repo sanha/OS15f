@@ -1,6 +1,8 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <syscall-nr.h>
+//#include <user/syscall.h>
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -10,6 +12,29 @@ static long long page_fault_cnt;
 
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
+
+
+/* Invokes syscall NUMBER, passing argument ARG0, and returns the
+   return value as an `int'. */
+#define syscall1(NUMBER, ARG0)                                           \
+        ({                                                               \
+          int retval;                                                    \
+          asm volatile                                                   \
+            ("pushl %[arg0]; pushl %[number]; int $0x30; addl $8, %%esp" \
+               : "=a" (retval)                                           \
+               : [number] "i" (NUMBER),                                  \
+                 [arg0] "g" (ARG0)                                       \
+               : "memory");                                              \
+          retval;                                                        \
+        })
+
+static void
+exit (int status)
+{
+  syscall1 (SYS_EXIT, status);
+  NOT_REACHED (); 
+}
+
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -89,7 +114,8 @@ kill (struct intr_frame *f)
       printf ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
-      thread_exit (); 
+      //thread_exit (); 
+	  exit(-1);
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
