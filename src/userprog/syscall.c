@@ -107,6 +107,15 @@ int s_wait(pid_t pid){
 	return -1;
 }
 
+pid_t s_exec(const char *cmd_line){
+	pid_t pid;
+
+	pid = process_execute(cmd_line);
+
+	if(pid == TID_ERROR) return PID_ERROR;
+	else pid;
+}
+
 
 int s_write(int fd, const void *buffer, unsigned size){
     int actual_size = size;
@@ -185,6 +194,8 @@ syscall_handler (struct intr_frame *f UNUSED)
             s_exit(args[0]); // args[0] for exit_status
             break;
         case SYS_EXEC:
+			get_args(f, &args[0], 1);
+			f->eax = s_exec(args[0]);
             break;
         case SYS_HALT:
             s_halt();
