@@ -165,6 +165,21 @@ thread_tick (void)
   else
     kernel_ticks++;
 
+  if (t==initial_thread){
+	  struct thread *child;
+	  struct thread *next;
+	  int exit_flag=0;
+	  for (child = t->childrenNext;child!=t;){
+		  next=child->siblingPrev;
+		  if (next == child) exit_flag=1;
+		  if (child->zombie_flag == 1){
+			  sema_up(&child->wait_sema);
+		  }
+		  if (exit_flag==1) break;
+		  child=next;
+	  }
+  }
+
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -250,6 +265,8 @@ thread_create (const char *name, int priority,
   /* PRJ2 : initialize file description, wait_sema */
   t->file_name = NULL;
   sema_init(&(t->wait_sema),0);
+  t->child_wait = 0;
+  t->zombie_flag = 0;
   for (i=0;i<FILELIMIT;i++){
       initial_thread->file_list[i] = NULL;
       initial_thread->fd[i] = 0;
@@ -610,7 +627,6 @@ init_thread (struct thread *t, const char *name, int priority)
 
     /* PRJ2: initializing file_name, wait_sema */
     t->file_name = NULL;
-    sema_init(&(t->wait_sema),0);
     for (i=0;i<FILELIMIT;i++)
         t->fd[i] = NULL;
 	t->exit_status = 0;

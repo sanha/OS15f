@@ -91,9 +91,12 @@ void s_exit(int status){
     file_name = strtok_r(copy_name, " ", &sv);
     printf("%s: exit(%d)\n",file_name, status);
  
-	cur->parent->exit_status = status;
+	cur->exit_status = status;
     // 4.
-    sema_up(&cur->wait_sema);
+	if (cur->child_wait==1){
+		cur->zombie_flag=1;
+    	sema_down(&cur->wait_sema);
+	}
     thread_exit();
 }
 
@@ -187,7 +190,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   int nsyscall, ret;
   int args[MAX_ARGS];
   int *esp = (int *)f->esp;
-  // TODO <check esp is valid> 
+  
+  is_valid_ptr((const void *)esp);
   nsyscall = *(esp++);
   //printf ("system call!\n");
   //debugging(nsyscall);

@@ -145,9 +145,12 @@ process_wait (tid_t child_tid UNUSED)
           //    
           //}else{
               // waiting for child_tid
-              sema_down(&(child->wait_sema));
-			  result = cur->exit_status;
-			  break;
+		  child->child_wait =1;
+		  while (child->zombie_flag == 0)
+			  barrier();
+		  result = child->exit_status;
+          sema_up(&(child->wait_sema));
+	      break;
           //}
       }
       if (child == child->siblingNext)
