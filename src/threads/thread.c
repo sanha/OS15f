@@ -266,6 +266,7 @@ thread_create (const char *name, int priority,
   t->file_name = NULL;
   sema_init(&(t->wait_sema),0);
   sema_init(&(t->load_sema),0);
+  sema_init(&(t->exit_sema),0);
   t->child_wait = 0;
   t->load_wait = 0;
   t->zombie_flag = 0;

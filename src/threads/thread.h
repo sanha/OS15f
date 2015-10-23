@@ -151,6 +151,7 @@ struct thread
     struct file* file_name;             /* File name of itself. */
     struct semaphore wait_sema;         /* Used at process_wait() for waiting semaphore. */
 	struct semaphore load_sema;
+	struct semaphore exit_sema;
 	int exit_status;
 	int child_wait, zombie_flag;
 	int load_wait;

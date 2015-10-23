@@ -101,7 +101,7 @@ void s_exit(int status){
 	s_close_file(FD_ALL);
     //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
 	if (cur->file_name) file_close(cur->file_name);
- 
+    sema_up(&cur->exit_sema); 
 	thread_exit();
 }
 

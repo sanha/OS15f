@@ -149,20 +149,13 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child;
   for (child = cur -> childrenPrev; child != cur;){
       if (child->tid == child_tid){
-          // TODO
-          //   1) if target child is zombie => delete it and fix parent-child-sibling relationship
-          //   2) else sema_down(&(child->wait_sema))
-          //if (child->status == THREAD_ZOMBIE){
-          //    
-          //}else{
-              // waiting for child_tid
 		  child->child_wait =1;
 		  while (child->zombie_flag == 0)
 			  barrier();
 		  result = child->exit_status;
           sema_up(&(child->wait_sema));
+		  sema_down(&(child->exit_sema));
 	      break;
-          //}
       }
       if (child == child->siblingNext)
           break;
