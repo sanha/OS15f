@@ -164,7 +164,7 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+/*
   if (t==initial_thread){
  	  //t=initial_thread;
 	  struct thread *child;
@@ -180,7 +180,7 @@ thread_tick (void)
 		  child=next;
 	  }
   }
-
+*/
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -268,6 +268,8 @@ thread_create (const char *name, int priority,
   sema_init(&(t->wait_sema),0);
   sema_init(&(t->load_sema),0);
   sema_init(&(t->exit_sema),0);
+  sema_init(&(t->zombie_sema),0);
+  sema_init(&(t->exec_sema),0);
   t->child_wait = 0;
   t->load_wait = 0;
   t->zombie_flag = 0;

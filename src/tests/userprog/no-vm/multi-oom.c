@@ -115,12 +115,14 @@ main (int argc, char *argv[])
   if (is_at_root)
     msg ("begin");
 
+
   /* If -k is passed, crash this process. */
   if (argc > 2 && !strcmp(argv[2], "-k"))
     {
       consume_some_resources_and_die (n);
       NOT_REACHED ();
     }
+  //if (n>10) return n;
 
   int howmany = is_at_root ? EXPECTED_REPETITIONS : 1;
   int i, expected_depth = -1;

@@ -90,6 +90,7 @@ start_process (void *file_name_)
   if (t->load_wait==1){
 	  if (success) t->load_status = LOAD_SUCCESS;
   	  else t->load_status = LOAD_FAILED;
+	  sema_up(&t->exec_sema);
   	  sema_down(&t->load_sema);
   }
   
@@ -150,8 +151,9 @@ process_wait (tid_t child_tid UNUSED)
   for (child = cur -> childrenPrev; child != cur;){
       if (child->tid == child_tid){
 		  child->child_wait =1;
-		  while (child->zombie_flag == 0)
-			  barrier();
+		  sema_down(&child->zombie_sema);
+		  /*while (child->zombie_flag == 0)
+			  barrier();*/
 		  result = child->exit_status;
           sema_up(&(child->wait_sema));
 		  sema_down(&(child->exit_sema));

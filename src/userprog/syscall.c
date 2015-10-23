@@ -79,7 +79,8 @@ void s_exit(int status){
     strlcpy(copy_name, cur->name, strlen(cur->name)+1);
     file_name = strtok_r(copy_name, " ", &sv);
     printf("%s: exit(%d)\n",file_name, status);
-	cur->zombie_flag=1;
+	//cur->zombie_flag=1;
+	sema_up(&cur->zombie_sema);
 	cur->exit_status = status;
 	s_close_file(FD_ALL);
     // 4.
@@ -132,9 +133,10 @@ pid_t s_exec(const char *cmd_line){
 	for (child = cur->childrenNext ; child!=cur ; child = child->siblingPrev){
 		if (child->tid == pid){
 			child->load_wait = 1;
-			while (child->load_status != LOAD_SUCCESS && child->load_status!=LOAD_FAILED){
+			/*while (child->load_status != LOAD_SUCCESS && child->load_status!=LOAD_FAILED){
 				barrier();
-			}
+			}*/
+			sema_down(&child->exec_sema);
 
 			enum Load_status child_load_status = child->load_status;
 			sema_up(&child->load_sema);
