@@ -93,7 +93,7 @@ size_t left_space(void){
 	struct block* b;
 	for (d = descs; d < descs + desc_cnt ; d++){
 		for (e = list_begin (&d->free_list); e!=list_end(&d->free_list);e = list_next(e)) {
-			b = list_entry (list_pop_front (&d->free_list), struct block, free_elem);
+			b = list_entry (e, struct block, free_elem);
 			sum += block_size ((void *)b);	 	
 		}
 	}
