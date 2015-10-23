@@ -28,6 +28,8 @@ typedef int tid_t;
 /* Number of files */
 #define FILELIMIT 64
 
+#define FD_MIN 2 
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -94,9 +96,10 @@ struct child_list{
     struct thread *self;
 };
 
-struct t_file{
-    struct file* name;
-    bool open_flag;
+struct file_elem{
+	struct file *file;
+	int fd;
+	struct list_elem elem;
 };
 
 struct thread
@@ -108,9 +111,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct file *file_list[FILELIMIT];
-    int fd[FILELIMIT];
-    int fd_cnt;
+    struct list u_open_files;
+    int fd;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

@@ -2,7 +2,7 @@
 
 # Root directory which has /src as its child 
 #export PINTOS_DIR='/home/sp/PintosUserProgram/pintos'
-export PINTOS_DIR='/home/ryu/Team03'
+export PINTOS_DIR='/home/plos/Team03'
 
 # USED emulator. 'bochs'(Project1) or 'qmenu'(Project2,3,4)
 export TEST_EMUL='bochs'

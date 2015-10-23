@@ -27,11 +27,16 @@ static void syscall_handler (struct intr_frame *);
 void ger_args(struct intr_frame*, int*, int);
 void is_valid_ptr (const void *vaddr);
 void is_valid_buffer (void *, unsigned);
-struct file* process_get_file (int fd);
+int user_to_kernel(const void *vaddr);
+
+static int s_add_file(struct file *f);
+static struct file* s_get_file(int fd);
+static void s_close_file(int fd);
 
 void
 syscall_init (void) 
 {
+  lock_init(&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -124,28 +129,131 @@ pid_t s_exec(const char *cmd_line){
 	else pid;
 }
 
+bool s_create(const char *file, unsigned initial_size)
+{
+    bool success = false;
+    
+    lock_acquire(&filesys_lock);
+    success = filesys_create(file, initial_size);
+    lock_release(&filesys_lock);
+    
+    return success;
+}
+
+bool s_remove(const char *file)
+{
+    bool success = false;
+
+    lock_acquire(&filesys_lock);
+    success = filesys_remove(file);
+    lock_release(&filesys_lock);
+
+    return success;
+}
+
+int s_open(const char *file)
+{
+    struct file *f;
+    int fd = ERROR;
+
+    lock_acquire(&filesys_lock);
+    f = filesys_open(fd);
+    if(f)   fd = s_add_file(f);
+    lock_release(&filesys_lock);
+
+    return fd;
+}
+
+int s_filesize(int fd)
+{
+    struct file *f;
+    int size = ERROR;
+
+    lock_acquire(&filesys_lock);
+    f = s_get_file(fd);
+    if(f)   size = file_length(f);
+    lock_release(&filesys_lock);
+
+    return size;
+}
+
+int s_read(int fd, void *buffer, unsigned size)
+{
+    struct file *f;
+    int bytes = ERROR;
+
+    if(fd == STDIN_FILENO)
+    {
+        int i;
+        uint8_t *buff = (uint8_t *)buffer;
+        for(i = 0; i < size; i++)
+            buff[i] = input_getc();
+        bytes = size;
+    }
+    else
+    {
+        lock_acquire(&filesys_lock);
+        f = s_get_file(fd);
+        //file_deny_write(f);
+        if(f)   bytes = file_read(f, buffer, size);
+        //file_allow_write(f);
+        lock_release(&filesys_lock);
+    }
+    return bytes;
+}
 
 int s_write(int fd, const void *buffer, unsigned size){
-    int actual_size = size;
+    struct file *f;
+    int bytes = ERROR;
     //printf("s_write is called\n");
     if (fd == STDOUT_FILENO){
         putbuf(buffer, size);
-        return size;
+        bytes = size;
     }
-	//printf("WOW\n");
-    lock_acquire(&filesys_lock);
-    struct file *f = process_get_file(fd);
-    if (!f){
+    else
+    {
+        lock_acquire(&filesys_lock);
+        f = s_get_file(fd);
+        if (f)  bytes = file_write(f, buffer, size);
         lock_release(&filesys_lock);
-        return -1; // ERROR
     }
-    int bytes = file_write(f, buffer, size);
-    lock_release(&filesys_lock);
     /*while ((char *)buffer!=0){
         printf("%c",(char *)buffer);
         buffer+=1;
     }*/
     return bytes;
+}
+
+void s_seek(int fd, unsigned position)
+{
+    struct file *f;
+
+    lock_acquire(&filesys_lock);
+    f = s_get_file(fd);
+    if(f)   file_seek(f, position);
+    lock_release(&filesys_lock);
+}
+
+unsigned s_tell(int fd)
+{
+    struct file *f;
+    unsigned position = ERROR;
+
+    lock_acquire(&filesys_lock);
+    f = s_get_file(fd);
+    if(f)   position = file_tell(f);
+    lock_release(&filesys_lock);
+    
+    return position;
+}
+
+void s_close(int fd)
+{
+    struct file *f;
+
+    lock_acquire(&filesys_lock);
+    s_close_file(fd);
+    lock_release(&filesys_lock);
 }
 
 static void debugging(int syscall_type){
@@ -204,56 +312,112 @@ syscall_handler (struct intr_frame *f UNUSED)
             s_exit(args[0]); // args[0] for exit_status
             break;
         case SYS_EXEC:
-			get_args(f, &args[0], 1);
-			is_valid_ptr((const void *) args[0]);
-			f->eax = s_exec((const char *)args[0]);
+            get_args(f, &args[0], 1);
+            args[0] = user_to_kernel((const void *) args[0]);
+            f->eax = s_exec((const char *)args[0]);
             break;
         case SYS_HALT:
             s_halt();
             break;
         case SYS_WAIT:
-			get_args(f,&args[0],1);
-			f->eax = s_wait(args[0]);
+            get_args(f,&args[0],1);
+            f->eax = s_wait(args[0]);
             break;
         // File-related
         case SYS_CREATE:
+            get_args(f, &args[0], 2);
+            args[0] = user_to_kernel((const void *)args[0]);
+            f->eax = s_create((const char *)args[0],(unsigned)args[1]);
             break;
         case SYS_REMOVE:
+            get_args(f, &args[0], 1);
+            args[0] = user_to_kernel((const void *)args[0]);
+            f->eax = s_remove((const char *)args[0]);
             break;
         case SYS_OPEN:
+            get_args(f, &args[0], 1);
+            args[0] = user_to_kernel((const void *)args[0]);
+            f->eax = s_open((const char *)args[0]);
             break;
         case SYS_FILESIZE:
+            get_args(f, &args[0], 1);
+            f->eax = s_filesize((int)args[0]);
             break;
         case SYS_READ:
+            get_args(f, &args[0], 3);
+            is_valid_buffer((void *)args[1], (unsigned) args[2]);
+            args[1] = user_to_kernel((const void *)args[1]);
+            f->eax = s_read((int)args[0],(const void *)args[1], (unsigned)args[2]);
             break;
         case SYS_WRITE:
             // read file_description, buffer, size
             get_args(f, &args[0], 3);
-			is_valid_buffer((void *) args[1], (unsigned) args[2]);
+            is_valid_buffer((void *) args[1], (unsigned) args[2]);
+            args[1] = user_to_kernel((const void *)args[1]);
             f->eax = s_write(args[0], (const void *)args[1], (unsigned) args[2]);
             break;
         case SYS_SEEK:
+            get_args(f, &args[0], 2);
+            s_seek((int)args[0], (unsigned)args[1]);
             break;
         case SYS_TELL:
+            get_args(f, &args[0], 1);
+            f->eax = s_tell((int)args[0]);
             break;
         case SYS_CLOSE:
+            get_args(f, &args[0], 1);
+            s_close((int)args[0]);
             break;
         default:
             break;
     }
 }
 
+int s_add_file(struct file * f)
+{
+   struct thread *t = thread_current();
+   struct file_elem *fe = malloc(sizeof(struct file_elem));
+   fe->file = f;
+   fe->fd = t->fd++;
+   list_push_back(&t->u_open_files, &fe->elem);
+   return fe->fd;
+}
+
 // Return file pointer for certain fd
-struct file* process_get_file (int fd){
+struct file* s_get_file (int fd){
     struct thread *t = thread_current();
-    int i;
-    for (i=0;i<t->fd_cnt;i++){
-        if (t->fd[i] == fd){
-            return t->file_list[i];
-        }
+    struct list_elem *e;
+    struct file_elem *fe;
+
+    for(e = list_begin(&t->u_open_files); e != list_end(&t->u_open_files); e = list_next(e))
+    {
+        fe = list_entry(e, struct file_elem, elem);
+        if(fd == fe->fd)
+            return fe->file;
     }
     return NULL;
 }
+
+void s_close_file(int fd)
+{
+    struct thread *t = thread_current();
+    struct list_elem *e;
+    struct file_elem *fe;
+
+    for(e = list_begin(&t->u_open_files); e != list_end(&t->u_open_files); e = list_next(e))
+    {
+        fe = list_entry(e, struct file_elem, elem);
+        if(fd == fe->fd || fd == FD_ALL)
+        {
+            file_close(fe->file);
+            list_remove(&fe->elem);
+            free(fe);
+            if(fd != FD_ALL)
+                return;
+        }
+    }
+}
+    
     
 // Get args (args count) from stack, and save it in *args
 void get_args(struct intr_frame *f, int *args, int argc){
@@ -279,6 +443,11 @@ void is_valid_ptr(const void *vaddr){
     if (vaddr < USER_VADDR_BOTTOM) // 0x08048000
         s_exit(ERROR);
 
+}
+
+int user_to_kernel(const void *vaddr)
+{
+	is_valid_ptr(vaddr);
 	void *p = pagedir_get_page(thread_current()->pagedir, vaddr);
 	if(!p) {s_exit(ERROR);}
 	return (int) p;
