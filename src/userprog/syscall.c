@@ -198,9 +198,7 @@ int s_read(int fd, void *buffer, unsigned size)
     {
         lock_acquire(&filesys_lock);
         f = s_get_file(fd);
-        //file_deny_write(f);
         if(f)   bytes = file_read(f, buffer, size);
-        //file_allow_write(f);
         lock_release(&filesys_lock);
     }
     return bytes;
@@ -218,7 +216,12 @@ int s_write(int fd, const void *buffer, unsigned size){
     {
         lock_acquire(&filesys_lock);
         f = s_get_file(fd);
-        if (f)  bytes = file_write(f, buffer, size);
+        if (f)  
+		{
+			file_allow_write(f);
+			bytes = file_write(f, buffer, size);
+			file_deny_write(f);
+		}
         lock_release(&filesys_lock);
     }
     /*while ((char *)buffer!=0){
@@ -253,11 +256,7 @@ unsigned s_tell(int fd)
 
 void s_close(int fd)
 {
-    struct file *f;
-
     lock_acquire(&filesys_lock);
-	f = s_get_file(fd);
-	if(f)	file_allow_write(f);
     s_close_file(fd);
     lock_release(&filesys_lock);
 }
@@ -305,7 +304,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   int args[MAX_ARGS];
   int *esp = (int *)f->esp;
   
-  is_valid_ptr((const void *)esp);
+  user_to_kernel((const void *)esp);
   nsyscall = *(esp++);
   //printf ("system call!\n");
   //debugging(nsyscall);
