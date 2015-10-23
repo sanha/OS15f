@@ -74,6 +74,16 @@ void s_exit(int status){
        4. sema_up wait_sema                        // Clear
        */
 
+    char copy_name[16];
+    char *file_name, *sv;
+    strlcpy(copy_name, cur->name, strlen(cur->name)+1);
+    file_name = strtok_r(copy_name, " ", &sv);
+    printf("%s: exit(%d)\n",file_name, status);
+	cur->zombie_flag=1;
+	cur->exit_status = status;
+    // 4.
+    sema_down(&cur->wait_sema);
+	
     // 1.
 
     // 3.
@@ -88,24 +98,10 @@ void s_exit(int status){
 
     // 2.
     set_hierarchy_delete(); // delete myself
-
- 
-    char copy_name[16];
-    char *file_name, *sv;
-    strlcpy(copy_name, cur->name, strlen(cur->name)+1);
-    file_name = strtok_r(copy_name, " ", &sv);
-    printf("%s: exit(%d)\n",file_name, status);
-	
 	s_close_file(FD_ALL);
     //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
 	if (cur->file_name) file_close(cur->file_name);
  
-	cur->exit_status = status;
-    // 4.
-	if (cur->child_wait==1){
-		cur->zombie_flag=1;
-    	sema_down(&cur->wait_sema);
-	}
 	thread_exit();
 }
 
@@ -114,7 +110,6 @@ int s_wait(pid_t pid){
 	struct thread *child = cur->childrenNext;
 	while (child!=cur) {
 		if (child->tid == pid) {
-			printf("process_wait call\n");
 			return process_wait(pid);
 		}
 		else {
