@@ -84,6 +84,22 @@ malloc_init (void)
     }
 }
 
+static size_t block_size (void *block); 
+
+size_t left_space(void){
+	size_t sum = 0;
+	struct desc *d;
+	struct list_elem* e;
+	struct block* b;
+	for (d = descs; d < descs + desc_cnt ; d++){
+		for (e = list_begin (&d->free_list); e!=list_end(&d->free_list);e = list_next(e)) {
+			b = list_entry (list_pop_front (&d->free_list), struct block, free_elem);
+			sum += block_size ((void *)b);	 	
+		}
+	}
+	return sum;
+}
+
 /* Obtains and returns a new block of at least SIZE bytes.
    Returns a null pointer if memory is not available. */
 void *

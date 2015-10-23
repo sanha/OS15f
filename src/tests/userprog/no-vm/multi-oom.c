@@ -23,6 +23,7 @@
 #include <syscall.h>
 #include <random.h>
 #include "tests/lib.h"
+//#include "threads/malloc.h"
 
 static const int EXPECTED_DEPTH_TO_PASS = 30;
 static const int EXPECTED_REPETITIONS = 10;
@@ -56,7 +57,7 @@ consume_some_resources (void)
      A low-memory condition in open() should not lead to the
      termination of the process.  */
   for (fd = 0; fd < fdmax; fd++)
-    if (open (test_name) == -1)
+  //  if (open (test_name) == -1)
       break;
 }
 
@@ -105,7 +106,9 @@ consume_some_resources_and_die (int seed)
 int
 main (int argc, char *argv[])
 {
+  //printf("\nbefore left space = %u\n",left_space());
   int n;
+
 
   n = argc > 1 ? atoi (argv[1]) : 0;
   bool is_at_root = (n == 0);
@@ -174,6 +177,8 @@ main (int argc, char *argv[])
       msg ("end");
     }
 
-  return expected_depth;
+
+    //printf("\nafter left space = %u\n",left_space());
+	return expected_depth;
 }
 // vim: sw=2

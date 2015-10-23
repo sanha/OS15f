@@ -95,7 +95,7 @@ start_process (void *file_name_)
   
   t->file_name = filesys_open(file_name);
 
-  file_deny_write(t->file_name);
+  if (t->file_name) file_deny_write(t->file_name);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);

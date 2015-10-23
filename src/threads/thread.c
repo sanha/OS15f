@@ -166,6 +166,7 @@ thread_tick (void)
     kernel_ticks++;
 
   if (t==initial_thread){
+ 	  //t=initial_thread;
 	  struct thread *child;
 	  struct thread *next;
 	  int exit_flag=0;
@@ -382,6 +383,7 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
+  list_remove (&thread_current()->elem);
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -777,7 +779,7 @@ void set_hierarchy_delete(){
 }
 
 void set_hierarchy_addition(struct thread* target_child){
-    struct thread *target_parent = idle_thread;
+    struct thread *target_parent = initial_thread;
     target_child->siblingNext = target_parent->childrenPrev;
 	target_child->siblingPrev = target_child;
     target_parent->childrenPrev->siblingPrev = target_child;
