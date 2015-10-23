@@ -98,7 +98,7 @@ void s_exit(int status){
 	
 	s_close_file(FD_ALL);
     //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
-	file_close(cur->file_name);
+	if (cur->file_name) file_close(cur->file_name);
  
 	cur->exit_status = status;
     // 4.
@@ -114,6 +114,7 @@ int s_wait(pid_t pid){
 	struct thread *child = cur->childrenNext;
 	while (child!=cur) {
 		if (child->tid == pid) {
+			printf("process_wait call\n");
 			return process_wait(pid);
 		}
 		else {
@@ -128,9 +129,35 @@ pid_t s_exec(const char *cmd_line){
 	pid_t pid;
 
 	pid = process_execute(cmd_line);
+	//printf("			@ s_exec, pid = %d\n",pid);
+
+	struct thread* child;
+	struct thread* cur = thread_current();
+	for (child = cur->childrenNext ; child!=cur ; child = child->siblingPrev){
+		if (child->tid == pid){
+			child->load_wait = 1;
+			while (child->load_status != LOAD_SUCCESS && child->load_status!=LOAD_FAILED){
+				barrier();
+			}
+
+			enum Load_status child_load_status = child->load_status;
+			sema_up(&child->load_sema);
+			/*if (child_load_status == LOAD_SUCCESS){
+				printf("			child->load_status = %d\n", 1);
+			}else if (child_load_status == LOAD_FAILED){
+				printf("			child->load_status = %d\n", 0);
+			}*/
+
+			if (child_load_status == LOAD_FAILED){
+				return PID_ERROR;
+			}
+			break;
+		}
+		if (child == child->siblingPrev) break;
+	}
 
 	if(pid == TID_ERROR) return PID_ERROR;
-	else pid;
+	else return pid;
 }
 
 bool s_create(const char *file, unsigned initial_size)
@@ -415,7 +442,7 @@ void s_close_file(int fd)
 		e = list_next(e);
         if(fd == fe->fd || fd == FD_ALL)
         {
-            file_close(fe->file);
+            if (fe->file) file_close(fe->file);
             list_remove(&fe->elem);
             free(fe);
             if(fd != FD_ALL)

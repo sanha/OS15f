@@ -15,6 +15,13 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
+enum Load_status
+  {
+	  LOAD_SUCCESS,
+	  LOAD_FAILED,
+	  NOT_LOADED
+  };
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -143,8 +150,11 @@ struct thread
     //struct list child;
     struct file* file_name;             /* File name of itself. */
     struct semaphore wait_sema;         /* Used at process_wait() for waiting semaphore. */
+	struct semaphore load_sema;
 	int exit_status;
 	int child_wait, zombie_flag;
+	int load_wait;
+	enum Load_status load_status;
   };
 
 /* If false (default), use round-robin scheduler.

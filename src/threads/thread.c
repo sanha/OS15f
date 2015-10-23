@@ -265,8 +265,11 @@ thread_create (const char *name, int priority,
   /* PRJ2 : initialize file description, wait_sema */
   t->file_name = NULL;
   sema_init(&(t->wait_sema),0);
+  sema_init(&(t->load_sema),0);
   t->child_wait = 0;
+  t->load_wait = 0;
   t->zombie_flag = 0;
+  t->load_status = NOT_LOADED;
   return tid;
 }
 
@@ -625,6 +628,7 @@ init_thread (struct thread *t, const char *name, int priority)
     /* PRJ2: initializing file_name, wait_sema */
     t->file_name = NULL;
     t->exit_status = 0;
+	t->load_status = NOT_LOADED;
 
 	list_init(&t->u_open_files);
 	t->fd = FD_MIN;

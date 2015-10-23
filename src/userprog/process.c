@@ -86,6 +86,12 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
  
   success = load (file_name, &if_.eip, &if_.esp);
+
+  if (t->load_wait==1){
+	  if (success) t->load_status = LOAD_SUCCESS;
+  	  else t->load_status = LOAD_FAILED;
+  	  sema_down(&t->load_sema);
+  }
   
   t->file_name = filesys_open(file_name);
 
