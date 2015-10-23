@@ -72,6 +72,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
+  struct thread *t = thread_current();
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
@@ -85,6 +86,10 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
  
   success = load (file_name, &if_.eip, &if_.esp);
+  
+  t->file_name = filesys_open(file_name);
+
+  file_deny_write(t->file_name);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -166,6 +171,10 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  file_allow_write(cur->file_name);
+
+  file_close(cur->file_name);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
