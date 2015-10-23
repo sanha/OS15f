@@ -123,6 +123,7 @@ file_deny_write (struct file *file)
     {
       file->deny_write = true;
       inode_deny_write (file->inode);
+	  //print_inode_cnt(file->inode);
     }
 }
 
@@ -137,6 +138,7 @@ file_allow_write (struct file *file)
     {
       file->deny_write = false;
       inode_allow_write (file->inode);
+	  //print_inode_cnt(file->inode);
     }
 }
 

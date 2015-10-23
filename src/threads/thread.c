@@ -369,6 +369,7 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+  //printf("			IT'S USERPROG\n");
   process_exit ();
 #endif
 

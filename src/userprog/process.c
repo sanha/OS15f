@@ -172,9 +172,7 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-  file_allow_write(cur->file_name);
-
-  file_close(cur->file_name);
+//  file_close(cur->file_name);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

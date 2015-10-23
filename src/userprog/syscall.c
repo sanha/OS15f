@@ -95,6 +95,10 @@ void s_exit(int status){
     strlcpy(copy_name, cur->name, strlen(cur->name)+1);
     file_name = strtok_r(copy_name, " ", &sv);
     printf("%s: exit(%d)\n",file_name, status);
+	
+	s_close_file(FD_ALL);
+    //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
+	file_close(cur->file_name);
  
 	cur->exit_status = status;
     // 4.
@@ -102,7 +106,7 @@ void s_exit(int status){
 		cur->zombie_flag=1;
     	sema_down(&cur->wait_sema);
 	}
-    thread_exit();
+	thread_exit();
 }
 
 int s_wait(pid_t pid){
@@ -224,10 +228,6 @@ int s_write(int fd, const void *buffer, unsigned size){
 		}
         lock_release(&filesys_lock);
     }
-    /*while ((char *)buffer!=0){
-        printf("%c",(char *)buffer);
-        buffer+=1;
-    }*/
     return bytes;
 }
 
@@ -409,9 +409,10 @@ void s_close_file(int fd)
     struct list_elem *e;
     struct file_elem *fe;
 
-    for(e = list_begin(&t->u_open_files); e != list_end(&t->u_open_files); e = list_next(e))
+    for(e = list_begin(&t->u_open_files); e != list_end(&t->u_open_files);)
     {
         fe = list_entry(e, struct file_elem, elem);
+		e = list_next(e);
         if(fd == fe->fd || fd == FD_ALL)
         {
             file_close(fe->file);
