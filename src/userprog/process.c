@@ -573,6 +573,9 @@ setup_stack (void **esp, char *file_name)
   *esp -= 4;
   *(unsigned*)*esp = 0; // Phys_Mem = 0 <-> Virt_Mem = 0xc0000000
 
+  free(fn);
+  for (i=0;i<100;i++) free(args[i]);
+
   return success;
   
 }

@@ -102,7 +102,7 @@ void s_exit(int status){
     //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
 	if (cur->file_name) file_close(cur->file_name);
     sema_up(&cur->exit_sema); 	
-	printf("	@ s_exit left space is: %d\n", left_space());	
+	//printf("	@ s_exit left space is: %d\n", left_space());	
 	thread_exit();
 }
 
@@ -139,7 +139,7 @@ pid_t s_exec(const char *cmd_line){
 			enum Load_status child_load_status = child->load_status;
 			sema_up(&child->load_sema);
 			
-			printf("	@ s_exec left space is: %d\n", left_space());	
+			//printf("	@ s_exec left space is: %d\n", left_space());	
 			/*if (child_load_status == LOAD_SUCCESS){
 				printf("			child->load_status = %d\n", 1);
 			}else if (child_load_status == LOAD_FAILED){
