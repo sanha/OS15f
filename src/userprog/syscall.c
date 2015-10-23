@@ -157,8 +157,12 @@ int s_open(const char *file)
     int fd = ERROR;
 
     lock_acquire(&filesys_lock);
-    f = filesys_open(fd);
-    if(f)   fd = s_add_file(f);
+    f = filesys_open(file);
+    if(f)
+	{
+		file_deny_write(f);
+		fd = s_add_file(f);
+	}
     lock_release(&filesys_lock);
 
     return fd;
@@ -252,6 +256,8 @@ void s_close(int fd)
     struct file *f;
 
     lock_acquire(&filesys_lock);
+	f = s_get_file(fd);
+	if(f)	file_allow_write(f);
     s_close_file(fd);
     lock_release(&filesys_lock);
 }
