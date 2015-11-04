@@ -88,10 +88,10 @@ start_process (void *file_name_)
   success = load (file_name, &if_.eip, &if_.esp);
 
   if (t->load_wait==1){
-	  if (success) t->load_status = LOAD_SUCCESS;
-  	  else t->load_status = LOAD_FAILED;
-	  sema_up(&t->exec_sema);
-  	  sema_down(&t->load_sema);
+      if (success) t->load_status = LOAD_SUCCESS;
+      else t->load_status = LOAD_FAILED;
+      sema_up(&t->exec_sema);
+      sema_down(&t->load_sema);
   }
   
   t->file_name = filesys_open(file_name);
@@ -150,14 +150,14 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child;
   for (child = cur -> childrenPrev; child != cur;){
       if (child->tid == child_tid){
-		  child->child_wait =1;
-		  sema_down(&child->zombie_sema);
-		  /*while (child->zombie_flag == 0)
-			  barrier();*/
-		  result = child->exit_status;
+          child->child_wait =1;
+          sema_down(&child->zombie_sema);
+          /*while (child->zombie_flag == 0)
+              barrier();*/
+          result = child->exit_status;
           sema_up(&(child->wait_sema));
-		  sema_down(&(child->exit_sema));
-	      break;
+          sema_down(&(child->exit_sema));
+          break;
       }
       if (child == child->siblingNext)
           break;
@@ -600,4 +600,19 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+int process_add_object (void *object, bool property){
+    struct process_file *pf;
+    pf = malloc(sizeof(struct process_file));
+    if (!pf) return ERROR;
+    if (property == DIR)
+        pf->dir = (struct dir*)object;
+    else if (property == FILE)
+        pf->file = (struct file*)object;
+    pf->property = DIR;
+    pf->fd = thred_current()->fd;
+    thread_current()->fd++;
+    list_push_back(&thread_current()->u_open_files, &pf->elem);
+    return pf->fd;
 }

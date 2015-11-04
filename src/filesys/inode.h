@@ -23,4 +23,7 @@ void inode_allow_write (struct inode *);
 off_t inode_length (const struct inode *);
 void print_inode_cnt(const struct inode *);
 
+#define FILE 1
+#define DIR 2
+
 #endif /* filesys/inode.h */

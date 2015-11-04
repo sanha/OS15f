@@ -26,12 +26,12 @@ bool cache_less_recent(const struct list_elem *left_elem, const struct list_elem
 
 struct cache_block
 {
-	uint8_t *block;
-	bool read;
-	bool dirty;
-	int64_t used_tick;
-	block_sector_t sector;
-	struct list_elem elem;
+    uint8_t *block;
+    bool read;
+    bool dirty;
+    int64_t used_tick;
+    block_sector_t sector;
+    struct list_elem elem;
 };
 
 /* On-disk inode.
@@ -61,108 +61,110 @@ struct inode
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
+
+    bool property;                      /* FILE or DIR. */
   };
 
 
 void cache_init(void)
 {
-	list_init(&cache_list);
-	lock_init(&cache_lock);
-	cache_size = 0;
+    list_init(&cache_list);
+    lock_init(&cache_lock);
+    cache_size = 0;
 }
 
 struct cache_block* get_cache_block(block_sector_t sector, bool dirty)
 {
-	struct cache_block *cb;	
+    struct cache_block *cb; 
 
-	cb = search_cache_block(sector, dirty);
-		
-	if(cb == NULL)	cb = evict_cache_block(sector, dirty);
+    cb = search_cache_block(sector, dirty);
+        
+    if(cb == NULL)  cb = evict_cache_block(sector, dirty);
 
-	return cb;
+    return cb;
 }
 
 struct cache_block* search_cache_block(block_sector_t sector, bool dirty)
 {
-	struct cache_block *cb;
-	struct list_elem *e;
+    struct cache_block *cb;
+    struct list_elem *e;
 
-	for(e = list_begin(&cache_list); e != list_end(&cache_list); e = list_next(e))
-	{
-		cb = list_entry(e, struct cache_block, elem);
-		if(cb->sector == sector)
-		{
-			cb->dirty |= dirty;
-			cb->used_tick = timer_ticks;
-			return cb;
-		}
-	}
-	return NULL;
+    for(e = list_begin(&cache_list); e != list_end(&cache_list); e = list_next(e))
+    {
+        cb = list_entry(e, struct cache_block, elem);
+        if(cb->sector == sector)
+        {
+            cb->dirty |= dirty;
+            cb->used_tick = timer_ticks;
+            return cb;
+        }
+    }
+    return NULL;
 }
 
 struct cache_block* evict_cache_block(block_sector_t sector, bool dirty)
 {
-	struct cache_block *cb;
-	if(cache_size < MAX_CACHE_SIZE)
-	{
-		cb = malloc(sizeof(struct cache_block));
-		cb->block = malloc(BLOCK_SECTOR_SIZE);
-		memset(cb->block, 0, BLOCK_SECTOR_SIZE);
-		list_push_back(&cache_list, &cb->elem);
-	}
-	else
-	{
-		list_sort(&cache_list, cache_less_recent, NULL);
-		cb = list_entry(list_front(&cache_list), struct cache_block, elem);
-		write_back_cache(cb);
-	}
-	
-	cb->sector = sector;
-	cb->used_tick = timer_ticks();
-	cb->dirty = dirty;
-	block_read(fs_device, sector, cb->block);
-	return cb;
+    struct cache_block *cb;
+    if(cache_size < MAX_CACHE_SIZE)
+    {
+        cb = malloc(sizeof(struct cache_block));
+        cb->block = malloc(BLOCK_SECTOR_SIZE);
+        memset(cb->block, 0, BLOCK_SECTOR_SIZE);
+        list_push_back(&cache_list, &cb->elem);
+    }
+    else
+    {
+        list_sort(&cache_list, cache_less_recent, NULL);
+        cb = list_entry(list_front(&cache_list), struct cache_block, elem);
+        write_back_cache(cb);
+    }
+    
+    cb->sector = sector;
+    cb->used_tick = timer_ticks();
+    cb->dirty = dirty;
+    block_read(fs_device, sector, cb->block);
+    return cb;
 }
 
 void write_back_cache(struct cache_block * cb)
 {
-	if(cb->dirty)
-	{
-		block_write(fs_device, cb->sector, cb->block);
-		cb->dirty = false;
-	}
+    if(cb->dirty)
+    {
+        block_write(fs_device, cb->sector, cb->block);
+        cb->dirty = false;
+    }
 }
 
 void write_back_cache_list(bool halt)
 {
-	struct cache_block *cb;
-	struct list_elem *next,*e;
-	
-	for(e = list_begin(&cache_list); e != list_end(&cache_list);)
-	{
-		next = list_next(e);
-		cb = list_entry(e, struct cache_block, elem);
-		write_back_cache(cb);
-		if(halt)
-		{
-			list_remove(&cb->elem);
-			free(cb->block);
-			free(cb);
-		}
-		e = next;
-	}
-	
+    struct cache_block *cb;
+    struct list_elem *next,*e;
+    
+    for(e = list_begin(&cache_list); e != list_end(&cache_list);)
+    {
+        next = list_next(e);
+        cb = list_entry(e, struct cache_block, elem);
+        write_back_cache(cb);
+        if(halt)
+        {
+            list_remove(&cb->elem);
+            free(cb->block);
+            free(cb);
+        }
+        e = next;
+    }
+    
 }
 
 
 bool cache_less_recent(const struct list_elem *left_elem
-			, const struct list_elem *right_elem
-			, void *aux UNUSED)
+            , const struct list_elem *right_elem
+            , void *aux UNUSED)
 {
-	struct cache_block *left = list_entry(left_elem, struct cache_block, elem);
-	struct cache_block *right = list_entry(right_elem, struct cache_block, elem);
+    struct cache_block *left = list_entry(left_elem, struct cache_block, elem);
+    struct cache_block *right = list_entry(right_elem, struct cache_block, elem);
 
-	return left->used_tick < right->used_tick;
+    return left->used_tick < right->used_tick;
 }
 
 /* Returns the block device sector that contains byte offset POS
@@ -347,7 +349,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
-	/*
+    /*
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
           // Read full sector directly into caller's buffer. 
@@ -365,12 +367,12 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
             }
           block_read (fs_device, sector_idx, bounce);
           memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
-	  //printf("bounce:%s\n",&bounce);
+      //printf("bounce:%s\n",&bounce);
         }
-	*/
-	lock_acquire(&cache_lock);
- 	cb = get_cache_block(sector_idx,false);
-	memcpy(buffer + bytes_read, cb->block + sector_ofs, chunk_size);
+    */
+    lock_acquire(&cache_lock);
+    cb = get_cache_block(sector_idx,false);
+    memcpy(buffer + bytes_read, cb->block + sector_ofs, chunk_size);
         lock_release(&cache_lock);
       /* Advance. */
       size -= chunk_size;
@@ -413,17 +415,17 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       int chunk_size = size < min_left ? size : min_left;
       if (chunk_size <= 0)
         break;
-/*	
+/*  
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
           // Write full sector directly to disk. 
           block_write (fs_device, sector_idx, buffer + bytes_written);
-	  if(bounce == NULL)
-	  {
-		bounce = malloc(BLOCK_SECTOR_SIZE);
-		if(bounce == NULL)
-		break;
-	  }
+      if(bounce == NULL)
+      {
+        bounce = malloc(BLOCK_SECTOR_SIZE);
+        if(bounce == NULL)
+        break;
+      }
           block_read(fs_device, sector_idx, bounce);
         }
       else 
@@ -446,18 +448,18 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
           memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
           block_write (fs_device, sector_idx, bounce);
         }
-*/	
-	lock_acquire(&cache_lock);
-	cb = get_cache_block(sector_idx, true);
+*/  
+    lock_acquire(&cache_lock);
+    cb = get_cache_block(sector_idx, true);
 
-	if(!(sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
-	&& !(sector_ofs > 0 || chunk_size < sector_left))
-		memset(cb->block, 0, BLOCK_SECTOR_SIZE);
-	memcpy(cb->block + sector_ofs, buffer + bytes_written, chunk_size);
-	lock_release(&cache_lock);
+    if(!(sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
+    && !(sector_ofs > 0 || chunk_size < sector_left))
+        memset(cb->block, 0, BLOCK_SECTOR_SIZE);
+    memcpy(cb->block + sector_ofs, buffer + bytes_written, chunk_size);
+    lock_release(&cache_lock);
 
-	//if(!check_cache(cb->block,bounce))
-	//	printf("different block in sector : %d\n",sector_idx);
+    //if(!check_cache(cb->block,bounce))
+    //  printf("different block in sector : %d\n",sector_idx);
       /* Advance. */
       size -= chunk_size;
       offset += chunk_size;
@@ -498,5 +500,5 @@ inode_length (const struct inode *inode)
 void
 print_inode_cnt(const struct inode *inode)
 {
-	printf("deny_write_cnt : %d\n", inode->deny_write_cnt);
+    printf("deny_write_cnt : %d\n", inode->deny_write_cnt);
 }
