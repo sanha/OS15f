@@ -7,6 +7,8 @@
 
 struct bitmap;
 
+void cache_init (void);
+void write_back_cache_list(bool halt);
 void inode_init (void);
 bool inode_create (block_sector_t, off_t);
 struct inode *inode_open (block_sector_t);
