@@ -237,6 +237,8 @@ inode_init (void)
 
 /* expand inode and allocate needed free-map. return successed length */
 off_t inode_expand (struct inode *inode, off_t length);
+/* free allocated area of inode */
+void inode_free (struct inode *inode);
 
 /* Initializes an inode with LENGTH bytes of data and
    writes the new inode to sector SECTOR on the file system
@@ -257,19 +259,24 @@ inode_create (block_sector_t sector, off_t length)
   ASSERT (sizeof *disk_inode == BLOCK_SECTOR_SIZE);
 
   disk_inode = calloc (1, sizeof *disk_inode);
-  tmp_inode = calloc (1, sizeof (struct inode));
+  tmp_inode = calloc (1, sizeof *tmp_inode);
 	if (disk_inode != NULL)
     {
 //    	size_t sectors = bytes_to_sectors (length);
 	    disk_inode->length = length;
     	disk_inode->magic = INODE_MAGIC;
 
+		tmp_inode->magic = INODE_MAGIC;
+		tmp_inode->length = 0;
 		tmp_inode->dir_idx = 0;
 		tmp_inode->ind_idx = 0;
 		tmp_inode->double_ind_idx= 0;
 		off_t successed = inode_expand(tmp_inode, length);	// get ptr to tmp_inode
 		if (successed == length) {
 			memcpy(disk_inode->ptr, tmp_inode->ptr, INODE_BLOCK_PTRS * sizeof(block_sector_t));	// TODO: CHECK
+			disk_inode->dir_idx = tmp_inode->dir_idx;
+			disk_inode->ind_idx = tmp_inode->ind_idx;
+			disk_inode->double_ind_idx = tmp_inode->double_ind_idx;
 			block_write (fs_device, sector, disk_inode);
 			success = true;
 		}
@@ -316,8 +323,10 @@ inode_open (block_sector_t sector)
 
   /* Allocate memory. */
   inode = malloc (sizeof *inode);
-  if (inode == NULL)
-    return NULL;
+  if (inode == NULL) {
+  	printf("	@ inode_open: malloc is faild.\n");
+	  return NULL;
+  }
 
   /* Initialize. */
   list_push_front (&open_inodes, &inode->elem);
@@ -325,12 +334,20 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  block_read (fs_device, inode->sector, &inode->data);
+
+  struct inode_disk disk_inode;
+  block_read (fs_device, inode->sector, &disk_inode);
+  inode->dir_idx = disk_inode->dir_idx;
+  inode->ind_idx = disk_inode->ind_idx;
+  inode->double_ind_idx = disk_inode->double_ind_idx;
+  inode->length = disk_inode->length;
+  memcpy(inode->ptr, disk_inode->ptr,INODE_BLOCK_PTRS * sizeof(block_sector_t));	// TODO: CHECK
+
   return inode;
 }
 
 /* Reopens and returns INODE. */
-struct inode *
+struct iniode *
 inode_reopen (struct inode *inode)
 {
   if (inode != NULL)
@@ -364,12 +381,20 @@ inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed) 
         {
-          free_map_release (inode->sector, 1);
-          free_map_release (inode->data.start,
-                            bytes_to_sectors (inode->data.length)); 
+			inode_free(inode);
         }
-
-      free (inode); 
+	  else {
+		struct inode_disk *disk_inode = calloc (1, sizeof *disk_inode);
+        disk_inode->length = inode->length;
+        disk_inode->magic = inode->magic;
+        disk_inode->dir_idx = inode->dir_idx;
+        disk_inode->ind_idx = inode->ind_idx;
+        disk_inode->double_ind_idx = inode->double_ind_idx;
+  		memcpy(disk_inode->ptr, inode->ptr,INODE_BLOCK_PTRS * sizeof(block_sector_t));	// TODO: CHECK
+	    block_write(fs_device, inode->sector, disk_inode);
+		free (disk_inode);
+	  }
+	  free (inode); 
     }
 }
 
@@ -597,6 +622,7 @@ off_t inode_expand (struct inode *inode, off_t length) {
 	}
 	block_sector_t ptrs2[INDIRECT_PTRS];
 	block_read(fs_device, inode->ptr[dir_idx], ptrs2);
+	inode->dir_idx++;
 	while (inode->inode->double_ind_idx < INDIRECT_PTRS) {
 		block_read(fs_device, ptrs2[inode->double_ind_idx], ptrs);
 		while (inode->ind_idx < INDIRECT_PTRS) {
@@ -614,3 +640,25 @@ off_t inode_expand (struct inode *inode, off_t length) {
 	}
 	return inode->length;
 }
+
+/* free allocated area of inode */
+void inode_free (struct inode *inode) {
+	free_map_release (inode->sector, 1);
+	block_sector_t ptrs[INDIRECT_PTRS];
+	block_sector_t ptrs2[INDIRECT_PTRS];
+	if (inode->dir_idx == DIRECT_PTRS) {
+	//	block_read(fs_device, inode->ptr[dir_idx], 
+		while (inode->double_ind_idx > 0) {
+			inode->double_ind_idx--;
+			block_read(fs_device, ptrs2[inode->double_ind_idx], ptrs);
+			while (inode->ind_idx > 0) 	{
+			
+
+				inode->ind_idx --;
+			}
+			inode->ind_idx = INDIRECT_PTRS-1;
+		}
+	}
+}
+          free_map_release (inode->data.start,
+                            bytes_to_sectors (inode->data.length)); 
