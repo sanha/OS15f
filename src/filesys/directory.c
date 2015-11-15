@@ -26,7 +26,7 @@ struct dir_entry
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -124,10 +124,14 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock->acquire(&dir->inode->inode_lock);
+
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
   else
     *inode = NULL;
+
+  lock_release(&dir->inode->inode_lock);
 
   return *inode != NULL;
 }
@@ -148,6 +152,8 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock_acquire(&dir->inode->inode_lock);
+
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
     return false;
@@ -155,6 +161,9 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
     goto done;
+
+  if (!inode_add_parent(dir->inode->sector,inode_sector)) // 'dir' is parent of new one.
+      goto done;
 
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
@@ -175,6 +184,9 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 
  done:
+
+  lock_release(&dir->inode->inode_lock);
+
   return success;
 }
 
@@ -200,6 +212,9 @@ dir_remove (struct dir *dir, const char *name)
   inode = inode_open (e.inode_sector);
   if (inode == NULL)
     goto done;
+
+  /* Be an empty directory. */
+  if (inode->property == DIR && 
 
   /* Erase directory entry. */
   e.in_use = false;
