@@ -79,7 +79,8 @@ struct inode
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */	//TODO: DELETE
 
-	uint32_t dir_idx;                /* direct index */
+	off_t length;						/* length of inode data */
+	uint32_t dir_idx;               	/* direct index */
     uint32_t ind_idx;                   /* first indirect index */
     uint32_t double_ind_idx;            /* second indirect index */
     block_sector_t ptr[DIRECT_PTRS];    /* Pointer to direct and indirect blocks */ 
@@ -559,4 +560,57 @@ void
 print_inode_cnt(const struct inode *inode)
 {
 	printf("deny_write_cnt : %d\n", inode->deny_write_cnt);
+}
+
+
+/* expand inode to given length and allocate needed free-map. return successed length */
+off_t inode_expand (struct inode *inode, off_t length) {
+	if (length < inode->length) return inode->length;
+	size_t left_sectors = bytes_to_sector(length) - bytes_to_sector(inode->length);
+	int init[BLOCK_SECTOR_SIZE/4] = {0};
+
+	while (inode->dir_idx < DIRECT_BLOCKS) {
+		free_map_allocate (1, &inode->ptr[inode->dir_idx]);
+		block_write(fs_device, inode->ptr[inode->dir_idx], init);
+		inode->dir_idx ++;
+		inode->length += BLOCK_SECTOR_SIZE;
+		left_sectors --;
+		if (left_sectors == 0) {
+			return length;
+		}
+	}
+	block_sector_t ptrs[INDIRECT_PTRS];
+	while (inode->dir_idx < DIRECT_BLOCKS + IND_BLOCKS) {
+		block_read(fs_device, inode->ptr[dir_idx], ptrs);
+		while (inode->ind_idx < INDIRECT_PTRS) {
+			free_map_allocate (1, &ptrs[inode->ind_idx]);
+			block_write(fs_device, ptrs[inode->ind_idx], init);
+			inode->ind_idx ++;
+			inode->length += BLOCK_SECTOR_SIZE;
+			left_sectors --;
+			if (left_sectors == 0) {
+				return length;
+			}
+		}
+		inode->dir_idx ++;
+		inode->ind_idx = 0;
+	}
+	block_sector_t ptrs2[INDIRECT_PTRS];
+	block_read(fs_device, inode->ptr[dir_idx], ptrs2);
+	while (inode->inode->double_ind_idx < INDIRECT_PTRS) {
+		block_read(fs_device, ptrs2[inode->double_ind_idx], ptrs);
+		while (inode->ind_idx < INDIRECT_PTRS) {
+			free_map_allocate (1, &ptrs[inode->ind_idx]);
+			block_write(fs_device, ptrs[inode->ind_idx], init);
+			inode->ind_idx ++;
+			inode->length += BLOCK_SECTOR_SIZE;
+			left_sectors --;
+			if (left_sectors == 0) {
+				return length;
+			}
+		}
+		inode->double_ind_idx ++;
+		inode->ind_idx = 0;
+	}
+	return inode->length;
 }
