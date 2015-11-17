@@ -13,6 +13,8 @@
 #define INODE_MAGIC 0x494e4f44
 #define MAX_CACHE_SIZE 64
 
+#define MAX_FILE_SIZE 8980480
+
 static struct list cache_list;
 static struct lock cache_lock;
 static int cache_size;
@@ -199,7 +201,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length, bool is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -212,25 +214,26 @@ inode_create (block_sector_t sector, off_t length)
 
   disk_inode = calloc (1, sizeof *disk_inode);
   if (disk_inode != NULL)
+  {
+    size_t sectors = bytes_to_sectors (length);
+	if(length > MAX_FILE_SIZE) length = MAX_FILE_SIZE; 
+    disk_inode->length = length;
+    disk_inode->magic = INODE_MAGIC;
+    if (free_map_allocate (sectors, &disk_inode->start)) 
     {
-      size_t sectors = bytes_to_sectors (length);
-      disk_inode->length = length;
-      disk_inode->magic = INODE_MAGIC;
-      if (free_map_allocate (sectors, &disk_inode->start)) 
-        {
-          block_write (fs_device, sector, disk_inode);
-          if (sectors > 0) 
-            {
-              static char zeros[BLOCK_SECTOR_SIZE];
-              size_t i;
-              
-              for (i = 0; i < sectors; i++) 
-                block_write (fs_device, disk_inode->start + i, zeros);
-            }
-          success = true; 
-        } 
-      free (disk_inode);
-    }
+      block_write (fs_device, sector, disk_inode);
+      if (sectors > 0) 
+      {
+        static char zeros[BLOCK_SECTOR_SIZE];
+        size_t i;
+          
+        for (i = 0; i < sectors; i++) 
+          block_write (fs_device, disk_inode->start + i, zeros);
+      }
+      success = true; 
+    } 
+    free (disk_inode);
+  }
   return success;
 }
 

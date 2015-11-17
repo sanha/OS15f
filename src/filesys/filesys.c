@@ -7,10 +7,14 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 
+#define SLASH 47
+
 /* Partition that contains the file system. */
 struct block *fs_device;
 
 static void do_format (void);
+struct dir* parse_dir (const char* path);
+char* parse_file (const char* path);
 
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */
@@ -45,14 +49,19 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size) 
+filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
-  bool success = (dir != NULL
-                  && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size)
-                  && dir_add (dir, name, inode_sector));
+  struct dir *dir = parse_dir(name);
+  char* fname = parese_file(name)
+  bool success = false;
+  if(strcmp(fname, ".") != 0 && strcmp(fname, "..") != 0){	  
+	 success = (dir != NULL
+               && free_map_allocate (1, &inode_sector)
+               && inode_create (inode_sector, initial_size, is_dir)
+               && dir_add (dir, name, inode_sector));
+  }
+
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
@@ -102,4 +111,37 @@ do_format (void)
     PANIC ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");
+}
+
+struct dir* parse_dir (const char* path)
+{
+	char copy[strlen(path) + 1];
+	memcpy(copy, path, strlen(path) + 1);
+
+	struct dir *dir;
+	char *temp = NULL;
+	char *next_token = NULL;
+
+	// if first path name "/" or active directory is null, go to root
+	if(copy[0] == SLASH || !thread_current()->stage) dir = dir_open_root();
+	else dir_reopen(thread_current()->stage);
+
+	char *token = strtok_r(copy, "/", temp);
+	if(token) next_token = strtok_r(NULL, "/", &temp);
+	for(token; next_token; next_token = strtok_r(NULL, "/". &temp)){
+		if(strcmp(token, ".") != 0){
+			
+		}
+		
+		token = next_token;
+	}
+
+}
+
+char* parse_file(const char* path)
+{
+}
+
+bool filesys_chdir(const char* name)
+{
 }
