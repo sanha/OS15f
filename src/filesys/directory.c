@@ -124,7 +124,7 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  lock->acquire(&dir->inode->inode_lock);
+  lock_acquire(&dir->inode->inode_lock);
 
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
@@ -220,7 +220,7 @@ dir_remove (struct dir *dir, const char *name)
       goto done;
 
   /* Be an unused directory. */
-  if inode->property == DIR && dir->inode->open_cnt > 1)
+  if (inode->property == DIR && dir->inode->open_cnt > 1)
       goto done;
 
   /* Erase directory entry. */
@@ -279,4 +279,8 @@ bool isRootDIR(struct dir *dir){
 bool getParentDIR(struct dir *dir, struct inode **inode){
     *inode = inode_open(dir->inode->parent);
     return *inode != NULL;
+}
+
+struct inode *dir_getInode(struct dir *d){
+	return d->inode;
 }

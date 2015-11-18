@@ -11,6 +11,7 @@
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "userprog/pagedir.h"
@@ -30,7 +31,8 @@ void is_valid_buffer (void *, unsigned);
 int user_to_kernel(const void *vaddr);
 
 static int s_add_file(struct file *f);
-static struct file* s_get_file(int fd);
+static int s_add_dir(struct dir *d);
+static struct file* s_get_file_elem(int fd);
 static void s_close_file(int fd);
 
 void
@@ -56,6 +58,12 @@ int s_write(int fd, const void *buffer, unsigned size);
 void s_seek(int fd, unsigned position);
 unsigned s_tell(int fd);
 void s_close(int fd);
+bool chdir(const char *dir);
+bool mkdir(const char *dir);
+bool readdir(int fd, char *name);
+bool isdir(int fd);
+int inumber(int fd);
+
 
 
 void s_halt(void){
@@ -165,7 +173,7 @@ bool s_create(const char *file, unsigned initial_size)
     bool success = false;
     
     lock_acquire(&filesys_lock);
-    success = filesys_create(file, initial_size);
+    success = filesys_create(file, initial_size, false);
     lock_release(&filesys_lock);
     
     return success;
@@ -191,8 +199,11 @@ int s_open(const char *file)
     f = filesys_open(file);
     if(f)
 	{
-		file_deny_write(f);
-		fd = s_add_file(f);
+		if(getProperty(file_getInode(f)) == FILE){
+			file_deny_write(f);
+			fd = s_add_file(f);
+		}
+		else fd = s_add_dir((struct dir *)f);
 	}
     lock_release(&filesys_lock);
 
@@ -201,11 +212,13 @@ int s_open(const char *file)
 
 int s_filesize(int fd)
 {
-    struct file *f;
+    struct file_elem *fe;
+	struct file *f;
     int size = ERROR;
 
     lock_acquire(&filesys_lock);
-    f = s_get_file(fd);
+    fe = s_get_file_elem(fd);
+	f = fe->file;
     if(f)   size = file_length(f);
     lock_release(&filesys_lock);
 
@@ -215,6 +228,7 @@ int s_filesize(int fd)
 int s_read(int fd, void *buffer, unsigned size)
 {
     struct file *f;
+	sturct file_elem *fe;
     int bytes = ERROR;
 
     if(fd == STDIN_FILENO)
@@ -228,7 +242,8 @@ int s_read(int fd, void *buffer, unsigned size)
     else
     {
         lock_acquire(&filesys_lock);
-        f = s_get_file(fd);
+        fe = s_get_file_elem(fd);
+		f = fe->file;
         if(f)   bytes = file_read(f, buffer, size);
         lock_release(&filesys_lock);
     }
@@ -237,6 +252,7 @@ int s_read(int fd, void *buffer, unsigned size)
 
 int s_write(int fd, const void *buffer, unsigned size){
     struct file *f;
+	struct file_elem *fe;
     int bytes = ERROR;
     //printf("s_write is called\n");
     if (fd == STDOUT_FILENO){
@@ -246,7 +262,8 @@ int s_write(int fd, const void *buffer, unsigned size){
     else
     {
         lock_acquire(&filesys_lock);
-        f = s_get_file(fd);
+        fe = s_get_file_elem(fd);
+		f = fe->file;
         if (f)  
 		{
 			file_allow_write(f);
@@ -261,9 +278,11 @@ int s_write(int fd, const void *buffer, unsigned size){
 void s_seek(int fd, unsigned position)
 {
     struct file *f;
+	struct file_elem *fe;
 
     lock_acquire(&filesys_lock);
-    f = s_get_file(fd);
+    fe = s_get_file_elem(fd);
+	f = fe->file;
     if(f)   file_seek(f, position);
     lock_release(&filesys_lock);
 }
@@ -271,10 +290,12 @@ void s_seek(int fd, unsigned position)
 unsigned s_tell(int fd)
 {
     struct file *f;
+	struct file_elem *fe;
     unsigned position = ERROR;
 
     lock_acquire(&filesys_lock);
-    f = s_get_file(fd);
+    fe = s_get_file_elem(fd);
+	f = fe->file;
     if(f)   position = file_tell(f);
     lock_release(&filesys_lock);
     
@@ -286,6 +307,51 @@ void s_close(int fd)
     lock_acquire(&filesys_lock);
     s_close_file(fd);
     lock_release(&filesys_lock);
+}
+
+bool chdir(const char *dir)
+{
+	return filesys_chdir(dir);
+}
+
+bool mkdir(const char *dir)
+{
+	return filesys_create(dir, 0, true);
+}
+
+bool readdir(int fd, char *name)
+{
+	struct list_elem *e;
+	struct file_elem *fe;
+
+	fe = s_get_file_elem(fd);
+	if(fe == NULL) return false;
+
+	if(fe->property == FILE) return false;
+
+	if(!dir_readdir(fe->dir)) return false;
+
+	return true;
+}
+
+bool isdir(int fd)
+{
+	struct file_elem *fe = s_get_file_elem(fd);
+	if(!fe) return ERROR;
+	if(fe->property == DIR) return true;
+	else return false;
+}
+
+int inumber(int fd)
+{
+	struct file_elem *fe = s_get_file_elem(fd);
+	if(!fe) return ERROR;
+
+	block_sector_t inumber;
+	if(fe->property == DIR) inumber = getInumber(dir_getInode(pf->dir));
+	else inumber = getInumber(file_getInode(pf->file));
+
+	return inumber;
 }
 
 static void debugging(int syscall_type){
@@ -400,23 +466,45 @@ syscall_handler (struct intr_frame *f UNUSED)
             get_args(f, &args[0], 1);
             s_close((int)args[0]);
             break;
+		case SYS_CHDIR
+			break;
+		case SYS_MKDIR:
+			break;
+		case SYS_READDIR:
+			break;
+		case SYS_ISDIR:
+			break;
+		case SYS_INUMBER:
+			break;
         default:
             break;
     }
 }
 
-int s_add_file(struct file * f)
+int s_add_file(struct file *f)
 {
    struct thread *t = thread_current();
    struct file_elem *fe = malloc(sizeof(struct file_elem));
+   fe->property = FILE;
    fe->file = f;
    fe->fd = t->fd++;
    list_push_back(&t->u_open_files, &fe->elem);
    return fe->fd;
 }
 
+int s_add_dir(struct dir *d)
+{
+   struct thread *t = thread_current();
+   struct file_elem *fe = malloc(sizeof(struct file_elem));
+   fe->property = DIR;
+   fe->dir = d;
+   fe->fd = t->fd++;
+   list_push_back(&t->u_open_files, &fe->elem);
+   return fe->fd;
+}
+
 // Return file pointer for certain fd
-struct file* s_get_file (int fd){
+struct file* s_get_file_elem (int fd){
     struct thread *t = thread_current();
     struct list_elem *e;
     struct file_elem *fe;
@@ -425,7 +513,7 @@ struct file* s_get_file (int fd){
     {
         fe = list_entry(e, struct file_elem, elem);
         if(fd == fe->fd)
-            return fe->file;
+            return fe;
     }
     return NULL;
 }
@@ -442,7 +530,8 @@ void s_close_file(int fd)
 		e = list_next(e);
         if(fd == fe->fd || fd == FD_ALL)
         {
-            if (fe->file) file_close(fe->file);
+            if (fe->Property == FILE) file_close(fe->file);
+			else dir_close(fe->dir);
             list_remove(&fe->elem);
             free(fe);
             if(fd != FD_ALL)

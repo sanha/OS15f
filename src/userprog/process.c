@@ -603,7 +603,7 @@ install_page (void *upage, void *kpage, bool writable)
 }
 
 int process_add_object (void *object, bool property){
-    struct process_file *pf;
+    struct file_elem *pf;
     pf = malloc(sizeof(struct process_file));
     if (!pf) return ERROR;
     if (property == DIR)

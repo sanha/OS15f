@@ -106,6 +106,8 @@ struct child_list{
 struct file_elem{
 	struct file *file;
 	int fd;
+	int property;
+	struct dir *dir;
 	struct list_elem elem;
 };
 

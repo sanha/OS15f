@@ -22,6 +22,8 @@ void inode_deny_write (struct inode *);
 void inode_allow_write (struct inode *);
 off_t inode_length (const struct inode *);
 void print_inode_cnt(const struct inode *);
+int getProperty(struct inode *);
+block_sector_t getInumber(const struct inode *);
 
 #define FILE 1
 #define DIR 2

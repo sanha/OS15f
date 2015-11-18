@@ -505,3 +505,11 @@ print_inode_cnt(const struct inode *inode)
 {
     printf("deny_write_cnt : %d\n", inode->deny_write_cnt);
 }
+
+int getProperty(struct inode *inode){
+	return inode -> property;
+}
+
+block_sector_t getInumber(const struct inode *inode){
+	return inode->sector;
+}

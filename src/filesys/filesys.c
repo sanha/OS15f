@@ -6,6 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include "thread/thread.h"
+#include "malloc.h"
 
 #define SLASH 47
 
@@ -53,8 +55,9 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 {
   block_sector_t inode_sector = 0;
   struct dir *dir = parse_dir(name);
-  char* fname = parese_file(name)
+  char* fname = parese_file(name);
   bool success = false;
+
   if(strcmp(fname, ".") != 0 && strcmp(fname, "..") != 0){	  
 	 success = (dir != NULL
                && free_map_allocate (1, &inode_sector)
@@ -65,6 +68,8 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
+
+  free(fname);
 
   return success;
 }
@@ -77,13 +82,32 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
-
-  if (dir != NULL)
-    dir_lookup (dir, name, &inode);
+  struct dir *dir = parse_dir(name);
+  char* fname = parse_file(name);
+  
+  if (dir != NULL){
+	  if (strcmp(fname, "..")){
+		  if(!getParentDIR(dir, &inode)){
+			  free(fname);
+			  return NULL;
+		  }
+ 	  }
+	  else if(strcmp(fname, ".") || (isRootDIR(dir) && strlen(fname) == 0)){
+		  free(fname);
+		  return (struct file *) dir;
+	  }
+	  else{
+   	 	if(!dir_lookup (dir, name, &inode)){
+			free(fname);
+			return NULL;
+		}
+	  }
+  }
   dir_close (dir);
+  free(fname);
 
+  if(getProperty(inode) == DIR) return (struct file *) dir_open(inode);
   return file_open (inode);
 }
 
@@ -94,13 +118,16 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
+  struct dir *dir = parse_dir(name);
+  char* fname = parse_file(name);
+  bool success = dir != NULL && dir_remove(dir, fname);
+
   dir_close (dir); 
+  free(fname);
 
   return success;
 }
-
+
 /* Formats the file system. */
 static void
 do_format (void)
@@ -121,6 +148,7 @@ struct dir* parse_dir (const char* path)
 	struct dir *dir;
 	char *temp = NULL;
 	char *next_token = NULL;
+	struct inode *inode = NULL;
 
 	// if first path name "/" or active directory is null, go to root
 	if(copy[0] == SLASH || !thread_current()->stage) dir = dir_open_root();
@@ -128,20 +156,83 @@ struct dir* parse_dir (const char* path)
 
 	char *token = strtok_r(copy, "/", temp);
 	if(token) next_token = strtok_r(NULL, "/", &temp);
-	for(token; next_token; next_token = strtok_r(NULL, "/". &temp)){
+	for(; next_token != NULL; next_token = strtok_r(NULL, "/". &temp)){
 		if(strcmp(token, ".") != 0){
-			
-		}
-		
+			if(strcmp(next_token, "..") == 0){
+				if(!getParentDIR(dir, &inode)) return NULL;}
+			else{
+				if(!dir_lookup(dir, next_token, &inode)) return NULL;}
+			dir_close(inode);
+			dir = dir_open(inode);
+		}		
 		token = next_token;
 	}
 
+	return dir;
 }
 
 char* parse_file(const char* path)
 {
+	char copy[strlen(path) + 1];
+	memcpy(copy, path, strlen(path) + 1);
+
+	struct dir *dir;
+	char *temp = NULL;
+	char *prev_token = NULL;
+
+	char *token = strtok_r(copy, "/", temp);
+	for(; token != NULL; token = strtok_r(NULL, "/", temp)){
+		prev_token = token;
+	}
+
+	char *name = malloc(strlen(prev_token) + 1);
+	memcpy(name, prev_token, strlen(prev_token) + 1);
+	return prev_token;
 }
 
 bool filesys_chdir(const char* name)
 {
+  struct inode *inode = NULL;
+  struct dir *dir = parse_dir(name);
+  char* fname = parse_file(name);
+
+
+  if(dir != NULL){
+	  if (strcmp(fname, "..")){
+		  free(fname)
+		  if(!getParentDIR(dir, &inode)){
+			  free(fname);
+			  return false;
+		  }
+ 	  }
+	  else if(strcmp(fname, ".")){
+		  free(fname);
+		  return true;
+	  }
+	  else if(isRootDIR(dir) && strlen(fname) == 0){
+		  free(fname);
+		  dir_close( thread_current -> stage);
+		  thread_current() -> stage = dir;
+		  return true;
+	  }
+	  else{
+   	 	if(!dir_lookup (dir, name, &inode)){
+			free(fname);
+			return false;
+		}
+	  }
+  }
+
+  dir_close(dir);
+  free(fname);
+
+  dir = dir_open(inode);
+  if(dir != NULL){
+	  thread_current() -> stage = dir;
+	  dir_close(thread_current() -> stage);
+	  dir_close(dir);
+	  return true;
+  }
+
+  return false;
 }
