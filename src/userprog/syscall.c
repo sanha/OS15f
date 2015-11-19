@@ -29,6 +29,7 @@ void ger_args(struct intr_frame*, int*, int);
 void is_valid_ptr (const void *vaddr);
 void is_valid_buffer (void *, unsigned);
 int user_to_kernel(const void *vaddr);
+void check_valid_string(const void* str);
 
 static int s_add_file(struct file *f);
 static int s_add_dir(struct dir *d);
@@ -58,11 +59,11 @@ int s_write(int fd, const void *buffer, unsigned size);
 void s_seek(int fd, unsigned position);
 unsigned s_tell(int fd);
 void s_close(int fd);
-bool chdir(const char *dir);
-bool mkdir(const char *dir);
-bool readdir(int fd, char *name);
-bool isdir(int fd);
-int inumber(int fd);
+bool s_chdir(const char *dir);
+bool s_mkdir(const char *dir);
+bool s_readdir(int fd, char *name);
+bool s_isdir(int fd);
+int s_inumber(int fd);
 
 
 
@@ -309,17 +310,17 @@ void s_close(int fd)
     lock_release(&filesys_lock);
 }
 
-bool chdir(const char *dir)
+bool s_chdir(const char *dir)
 {
 	return filesys_chdir(dir);
 }
 
-bool mkdir(const char *dir)
+bool s_mkdir(const char *dir)
 {
 	return filesys_create(dir, 0, true);
 }
 
-bool readdir(int fd, char *name)
+bool s_readdir(int fd, char *name)
 {
 	struct list_elem *e;
 	struct file_elem *fe;
@@ -334,7 +335,7 @@ bool readdir(int fd, char *name)
 	return true;
 }
 
-bool isdir(int fd)
+bool s_isdir(int fd)
 {
 	struct file_elem *fe = s_get_file_elem(fd);
 	if(!fe) return ERROR;
@@ -342,7 +343,7 @@ bool isdir(int fd)
 	else return false;
 }
 
-int inumber(int fd)
+int s_inumber(int fd)
 {
 	struct file_elem *fe = s_get_file_elem(fd);
 	if(!fe) return ERROR;
@@ -467,14 +468,30 @@ syscall_handler (struct intr_frame *f UNUSED)
             s_close((int)args[0]);
             break;
 		case SYS_CHDIR
+			get_args(f, &args[0], 1);
+			check_valid_string((const void *) arg[0]);
+			arg[0] = user_to_kernel_ptr((const void *) arg[0]);
+			f->eax = s_chdir((const char *) arg[0]);
 			break;
 		case SYS_MKDIR:
+			get_args(f, &args[0], 1);
+			check_valid_string((const void *) arg[0]);
+			arg[0] = user_to_kernel_ptr((const void *) arg[0]);
+			f->eax = s_mkdir((const char *) arg[0]);
 			break;
 		case SYS_READDIR:
+			get_args(f, &args[0], 2);
+			check_valid_string((const void *) arg[1]);
+			arg[1] = user_to_kernel_ptr((const void *) arg[0]);
+			f->eax = s_readdir((const char *) arg[1]);
 			break;
 		case SYS_ISDIR:
+			get_args(f, &args[0], 1);
+			f->eax = s_isdir(arg[0]);
 			break;
 		case SYS_INUMBER:
+			get_args(f, &args[0], 1);
+			f->eax = s_inumber(arg[0]);
 			break;
         default:
             break;
@@ -573,4 +590,11 @@ int user_to_kernel(const void *vaddr)
 	void *p = pagedir_get_page(thread_current()->pagedir, vaddr);
 	if(!p) {s_exit(ERROR);}
 	return (int) p;
+}
+
+void check_valid_string(const void* str)
+{
+	while(*(char *)user_to_kernel_ptr(str) != 0){
+		str = (char *)str + 1'
+	}
 }
