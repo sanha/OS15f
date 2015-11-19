@@ -83,6 +83,7 @@ exec_children (const char *child_name, pid_t pids[], size_t child_cnt)
 
   for (i = 0; i < child_cnt; i++) 
     {
+	//	msg("child_name is %s\n", child_name);
       char cmd_line[128];
       snprintf (cmd_line, sizeof cmd_line, "%s %zu", child_name, i);
       CHECK ((pids[i] = exec (cmd_line)) != PID_ERROR,

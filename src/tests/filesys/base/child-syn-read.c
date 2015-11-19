@@ -18,7 +18,7 @@ static char buf[BUF_SIZE];
 int
 main (int argc, const char *argv[]) 
 {
-  msg("child is created, argc is %d\n", argc);
+//  msg("child is created, argc is %d\n", argc);
   int child_idx;
   int fd;
   size_t i;
@@ -26,14 +26,15 @@ main (int argc, const char *argv[])
   quiet = true;
   
   CHECK (argc == 2, "argc must be 2, actually %d", argc);
+  //msg("argv[1] is %s\n", argv[1]);
   child_idx = atoi (argv[1]);
   
-  msg("check valid\n");
+  //msg("check valid\n");
 
   random_init (0);
   random_bytes (buf, sizeof buf);
 
-  msg("hello\n");
+  //msg("hello\n");
   CHECK ((fd = open (file_name)) > 1, "open \"%s\"", file_name);
   for (i = 0; i < sizeof buf; i++) 
     {
