@@ -13,6 +13,7 @@
 
 /* Partition that contains the file system. */
 struct block *fs_device;
+struct lock lock;
 
 static void do_format (void);
 struct dir* parse_dir (const char* path);
@@ -29,6 +30,7 @@ filesys_init (bool format)
   
   cache_init ();
   inode_init ();
+  lock_init (&lock);
   free_map_init ();
 
   if (format) 
@@ -53,6 +55,7 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
+	lock_acquire(&lock);
   block_sector_t inode_sector = 0;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
@@ -70,6 +73,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   dir_close (dir);
 
   free(fname);
+  lock_release(&lock);
 
   return success;
 }
@@ -82,6 +86,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
+	lock_acquire(&lock);
   struct inode *inode = NULL;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
@@ -90,22 +95,26 @@ filesys_open (const char *name)
 	  if (strcmp(fname, "..")){
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
+			  lock_release(&lock);
 			  return NULL;
 		  }
  	  }
 	  else if(strcmp(fname, ".") || (isRootDIR(dir) && strlen(fname) == 0)){
 		  free(fname);
+		  lock_release(&lock);
 		  return (struct file *) dir;
 	  }
 	  else{
    	 	if(!dir_lookup (dir, name, &inode)){
 			free(fname);
+			lock_release(&lock);
 			return NULL;
 		}
 	  }
   }
   dir_close (dir);
-  free(fname);
+  if (fname) free(fname);
+  lock_release(&lock);
 
   if(getProperty(inode) == DIR) return (struct file *) dir_open(inode);
   return file_open (inode);
@@ -118,12 +127,14 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
+	lock_acquire(&lock);
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
   bool success = dir != NULL && dir_remove(dir, fname);
 
   dir_close (dir); 
   free(fname);
+  lock_release(&lock);
 
   return success;
 }
@@ -154,7 +165,7 @@ struct dir* parse_dir (const char* path)
 	if(copy[0] == SLASH || !thread_current()->stage) dir = dir_open_root();
 	else dir_reopen(thread_current()->stage);
 
-	char *token = strtok_r(copy, "/", temp);
+	char *token = strtok_r(copy, "/", &temp);
 	if(token) next_token = strtok_r(NULL, "/", &temp);
 	for(; next_token != NULL; next_token = strtok_r(NULL, "/", &temp)){
 		if(strcmp(token, ".") != 0){
@@ -173,6 +184,7 @@ struct dir* parse_dir (const char* path)
 
 char* parse_file(const char* path)
 {
+	printf("	@ parse_file, path = %s\n",path);
 	char copy[strlen(path) + 1];
 	memcpy(copy, path, strlen(path) + 1);
 
@@ -180,14 +192,14 @@ char* parse_file(const char* path)
 	char *temp = NULL;
 	char *prev_token = NULL;
 
-	char *token = strtok_r(copy, "/", temp);
-	for(; token != NULL; token = strtok_r(NULL, "/", temp)){
+	char *token = strtok_r(copy, "/", &temp);
+	for(; token != NULL; token = strtok_r(NULL, "/", &temp)){
 		prev_token = token;
 	}
 
 	char *name = malloc(strlen(prev_token) + 1);
 	memcpy(name, prev_token, strlen(prev_token) + 1);
-	return prev_token;
+	return name;
 }
 
 bool filesys_chdir(const char* name)

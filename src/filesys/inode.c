@@ -279,7 +279,12 @@ inode_create (block_sector_t sector, off_t length, bool is_dir)
 		if (is_dir) disk_inode->property = DIR;
 		else disk_inode->property = FILE;
 		struct thread *cur = thread_current();
-		disk_inode->parent = inode_getSector(dir_get_inode(cur->stage));
+		if (cur->stage) {
+			disk_inode->parent = inode_getSector(dir_get_inode(cur->stage));
+		}
+		else {
+			disk_inode->parent = ROOT_DIR_SECTOR;
+		}
 
 		tmp_inode->length = 0;
 		tmp_inode->dir_idx = 0;
@@ -396,7 +401,9 @@ inode_close (struct inode *inode)
         disk_inode->dir_idx = inode->dir_idx;
         disk_inode->ind_idx = inode->ind_idx;
         disk_inode->double_ind_idx = inode->double_ind_idx;
-  		memcpy(disk_inode->ptr, inode->ptr, DIRECT_PTRS * sizeof(block_sector_t));	// TODO: CHECK
+		disk_inode->parent = inode->parent;
+		disk_inode->property = inode->property;
+		memcpy(disk_inode->ptr, inode->ptr, DIRECT_PTRS * sizeof(block_sector_t));	// TODO: CHECK
 	    block_write(fs_device, inode->sector, disk_inode);
 		free (disk_inode);
 	  }
@@ -441,7 +448,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
         break;
 
 	  lock_acquire(&cache_lock);
-  	  printf("	@ inode_read_at: block_read sector is %d\n",sector_idx);
+  	  //printf("	@ inode_read_at: block_read sector is %d\n",sector_idx);
  	  cb = get_cache_block(sector_idx,false);
 	  memcpy(buffer + bytes_read, cb->block + sector_ofs, chunk_size);
       lock_release(&cache_lock);
@@ -472,11 +479,13 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 
   if (size + offset > inode->length) {
-	lock_acquire(&inode->lock);
+	if (inode->property == FILE)
+		lock_acquire(&inode->lock);
 	  //printf ("	@ inode_write_at: call inode_expand. length is %d, sector is %d\n", inode->length, inode->sector);
 	inode_expand (inode, size + offset);
   	inode->length = size + offset;
-	lock_release(&inode->lock);
+	if (inode->property == FILE)
+		lock_release(&inode->lock);
   }
 
   //printf("	@ inode_write_at: inode_write is called. inode's sector is %d, size is %d, offset is  %d\n",inode->sector,size, offset);
