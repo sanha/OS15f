@@ -84,6 +84,7 @@ struct inode
     uint32_t ind_idx;                   /* first indirect index */
     uint32_t double_ind_idx;            /* second indirect index */
     block_sector_t ptr[DIRECT_PTRS];    /* Pointer to direct and indirect blocks */ 
+  	struct semaphore write_sema;
   };
 
 void cache_init(void)
@@ -333,6 +334,7 @@ inode_open (block_sector_t sector)
   inode->ind_idx = disk_inode->ind_idx;
   inode->double_ind_idx = disk_inode->double_ind_idx;
   inode->length = disk_inode->length;
+  sema_init(&inode->write_sema, 1);
   memcpy(inode->ptr, disk_inode->ptr, DIRECT_PTRS * sizeof(block_sector_t));	// TODO: CHECK
   free (disk_inode);
   return inode;
@@ -426,7 +428,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
         break;
 
 	  lock_acquire(&cache_lock);
-  	  //printf("	@ inode_read_at: block_read sector is %d\n",sector_idx);
+  	  printf("	@ inode_read_at: block_read sector is %d\n",sector_idx);
  	  cb = get_cache_block(sector_idx,false);
 	  memcpy(buffer + bytes_read, cb->block + sector_ofs, chunk_size);
       lock_release(&cache_lock);
@@ -454,6 +456,8 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   struct cache_block *cb;
   if (inode->deny_write_cnt)
     return 0;
+
+  sema_down(&inode->write_sema);
 
   if (size + offset > inode->length) {
 	//printf ("	@ inode_write_at: call inode_expand. length is %d, sector is %d\n", inode->length, inode->sector);
@@ -494,6 +498,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       bytes_written += chunk_size;
     }
 
+  sema_up(&inode->write_sema);
   return bytes_written;
 }
 
