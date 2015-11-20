@@ -66,12 +66,14 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 	 success = (dir != NULL
                && free_map_allocate (1, &inode_sector)
                && inode_create (inode_sector, initial_size, is_dir)
-               && dir_add (dir, name, inode_sector));
+               && dir_add (dir, fname, inode_sector));
   }
 
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
+
+  //printf("		@ success for %s = %d\n", fname, success);
 
   free(fname);
   //lock_release(&lock);
@@ -107,7 +109,8 @@ filesys_open (const char *name)
 		  return (struct file *) dir;
 	  }
 	  else{
-   	 	if(!dir_lookup (dir, name, &inode)){
+   	 	if(!dir_lookup (dir, fname, &inode)){
+  		printf("		@ wow\n");
 			free(fname);
 	//		lock_release(&lock);
 			return NULL;
@@ -123,7 +126,8 @@ filesys_open (const char *name)
   if (fname) free(fname);
   //lock_release(&lock);
 
-  if(getProperty(inode) == DIR) return (struct file *) dir_open(inode);
+  if(getProperty(inode) == DIR)
+	  return (struct file *) dir_open(inode);
   return file_open (inode);
 }
 
@@ -176,11 +180,13 @@ struct dir* parse_dir (const char* path)
 	if(token) next_token = strtok_r(NULL, "/", &temp);
 	for(; next_token != NULL; next_token = strtok_r(NULL, "/", &temp)){
 		if(strcmp(token, ".") != 0){
-			if(strcmp(next_token, "..") == 0){
+			//printf("		@ parsed dir name = %s\n", token);
+			if(strcmp(token, "..") == 0){
 				if(!getParentDIR(dir, &inode)) return NULL;}
 			else{
-				if(!dir_lookup(dir, next_token, &inode)) return NULL;}
-			dir_close(inode);
+				if(!dir_lookup(dir, token, &inode)) return NULL;}
+
+			dir_close(dir);
 			dir = dir_open(inode);
 		}		
 		token = next_token;
@@ -216,10 +222,12 @@ bool filesys_chdir(const char* name)
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
 
+//  printf("		@ filesys_chdir, dir = %s\n",dir);
+//  printf("		@ filesys_chdir, fname = %s\n",fname);
 
   if(dir != NULL){
 	  if (strcmp(fname, "..") == 0){
-		  free(fname);
+		  //free(fname);
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
 			  return false;
@@ -236,21 +244,21 @@ bool filesys_chdir(const char* name)
 		  return true;
 	  }
 	  else{
-   	 	if(!dir_lookup (dir, name, &inode)){
+   	 	if(!dir_lookup (dir, fname, &inode)){
 			free(fname);
 			return false;
 		}
 	  }
   }
-  else return NULL;
+  else return false;
 
   dir_close(dir);
   free(fname);
 
   dir = dir_open(inode);
   if(dir != NULL){
-	  thread_current() -> stage = dir;
 	  dir_close(thread_current() -> stage);
+	  thread_current() -> stage = dir;
 	  dir_close(dir);
 	  return true;
   }

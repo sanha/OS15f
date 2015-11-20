@@ -8,15 +8,15 @@ export PINTOS_DIR='/home/plos/Team03'
 export TEST_EMUL='bochs'
 
 # Current project. One of 'threads' 'userprog' 'vm' 'filesys'
-export PINTOS_PRJ='userprog'
-#export PINTOS_PRJ='filesys'
+#export PINTOS_PRJ='userprog'
+export PINTOS_PRJ='filesys/extended'
 
 # Test directory. One of 'threads' 'userprog' 'vm' 'filesys/extended'
-export TEST_DIR='userprog'
-#export TEST_DIR='filesys'
+#export TEST_DIR='userprog'
+export TEST_DIR='filesys/extended'
 
 # Test item
-export TEST_ITEM='args-single'
+export TEST_ITEM='dir-mkdir'
 
 # Additional test file like 'child-simple' 'tar' ...
 export ADD_TEST_FILE='child-simple'
