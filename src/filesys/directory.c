@@ -26,7 +26,7 @@ struct dir_entry
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -124,10 +124,14 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock_acquire(&dir->inode->inode_lock);
+
   if (lookup (dir, name, &e, NULL))
     *inode = inode_open (e.inode_sector);
   else
     *inode = NULL;
+
+  lock_release(&dir->inode->inode_lock);
 
   return *inode != NULL;
 }
@@ -148,6 +152,8 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock_acquire(&dir->inode->inode_lock);
+
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
     return false;
@@ -155,6 +161,9 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
     goto done;
+
+  if (!inode_add_parent(dir->inode->sector,inode_sector)) // 'dir' is parent of new one.
+      goto done;
 
   /* Set OFS to offset of free slot.
      If there are no free slots, then it will be set to the
@@ -175,6 +184,9 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 
  done:
+
+  lock_release(&dir->inode->inode_lock);
+
   return success;
 }
 
@@ -192,6 +204,8 @@ dir_remove (struct dir *dir, const char *name)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock_acquire(&dir->inode);
+
   /* Find directory entry. */
   if (!lookup (dir, name, &e, &ofs))
     goto done;
@@ -200,6 +214,14 @@ dir_remove (struct dir *dir, const char *name)
   inode = inode_open (e.inode_sector);
   if (inode == NULL)
     goto done;
+
+  /* Be an empty directory. */
+  if (inode->property == DIR && emptyDIR(dir) == false)
+      goto done;
+
+  /* Be an unused directory. */
+  if (inode->property == DIR && dir->inode->open_cnt > 1)
+      goto done;
 
   /* Erase directory entry. */
   e.in_use = false;
@@ -212,6 +234,7 @@ dir_remove (struct dir *dir, const char *name)
 
  done:
   inode_close (inode);
+  lock_release(&dir->inode);
   return success;
 }
 
@@ -223,6 +246,8 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
 
+  lock_acquire(&dir->inode);
+
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
     {
       dir->pos += sizeof e;
@@ -232,5 +257,27 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
           return true;
         } 
     }
+  lock_release(&dir->inode);
   return false;
 }
+
+bool emptyDIR(struct inode *inode){
+    struct dir_entry et;
+    off_t off;
+    for (off = 0 ; inode_read_at (inode, &et, sizeof et, off) == sizeof et ; off += sizeof et){
+        if (et.in_use) return false;
+    }
+    return true;
+}
+
+bool isRootDIR(struct dir *dir){
+    if (!dir) return false;
+    if (dir->inode->sector == ROOT_DIR_SECTOR) return true;
+    return false;
+}
+
+bool getParentDIR(struct dir *dir, struct inode **inode){
+    *inode = inode_open(dir->inode->parent);
+    return *inode != NULL;
+}
+

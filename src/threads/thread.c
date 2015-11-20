@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "devices/timer.h"
+#include "filesys/driectory.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -262,6 +263,8 @@ thread_create (const char *name, int priority,
       cur->childrenPrev = t;
   }
   t->childrenNext = t->childrenPrev = t;
+  if(thread_current()->stage) t->stage = dir_reopen(thread_current()->stage);
+  else t->stage = NULL;
 
   /* PRJ2 : initialize file description, wait_sema */
   t->file_name = NULL;
@@ -637,6 +640,8 @@ init_thread (struct thread *t, const char *name, int priority)
 
 	list_init(&t->u_open_files);
 	t->fd = FD_MIN;
+
+	t->stage = NULL;
 
 
   old_level = intr_disable ();

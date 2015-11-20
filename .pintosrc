@@ -45,8 +45,8 @@ export ADD_TEST_FILE='child-simple'
 # Well, you don't need to touch below without special reason.
 export PATH=$PINTOS_DIR/src/utils/:$PATH
 alias gop='cd $PINTOS_DIR/src/$PINTOS_PRJ;cd build'
-alias editrc='vi ~/.pintosrc'
-alias applyrc='source ~/.pintosrc'
+alias editrc='vi $PINTOS_DIR/.pintosrc'
+alias applyrc='source $PINTOS_DIR/.pintosrc'
 alias runitem='../../utils/pintos --$TEST_EMUL -- -q run $TEST_ITEM'
 alias checkitem='make tests/$TEST_DIR/$TEST_ITEM.result'
 alias debugitem='../../utils/pintos --$TEST_EMUL --gdb -- run $TEST_ITEM'
@@ -62,3 +62,7 @@ alias debugtar='pintos --$TEST_EMUL --gdb -- -q run "tar fs.tar /"'
 alias testitem='pintos -v -k -T 5 --bochs --filesys-size=2 -p tests/userprog/$TEST_ITEM -a TEST_ITEM -- -q -f run TEST_ITEM'
 alias testitem2='pintos -T 5 --bochs --filesys-size=2 -p tests/userprog/$TEST_ITEM -a $TEST_ITEM -- -q -f run $TEST_ITEM'
 alias auto="cd $PINTOS_DIR/src/$PINTOS_PRJ; make clean; make; gop; makedisk; formatdisk; pintos -p ../../examples/echo -a echo -- -q ; pintos -q run 'echo x'"
+alias vsc='vi $PINTOS_DIR/src/userprog/syscall.c'
+alias vfc='vi $PINTOS_DIR/src/filesys/filesys.c'
+alias vdc='vi $PINTOS_DIR/src/filesys/directory.c'
+alias vic='vi $PINTOS_DIR/src/filesys/inode.c'
