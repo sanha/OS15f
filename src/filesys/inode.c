@@ -59,6 +59,9 @@ struct inode_disk
 	uint32_t double_ind_idx;			/* second indirect index */
 	block_sector_t ptr[DIRECT_PTRS];	/* Pointer to direct and indirect blocks */
     uint32_t unused[122 - DIRECT_PTRS]; /* Not used. */
+
+	int property;
+	block_sedctor_t parent;
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -85,6 +88,9 @@ struct inode
     uint32_t double_ind_idx;            /* second indirect index */
     block_sector_t ptr[DIRECT_PTRS];    /* Pointer to direct and indirect blocks */ 
   	struct semaphore write_sema;
+
+	int property;
+	block_sedctor_t parent;
   };
 
 void cache_init(void)
@@ -250,7 +256,7 @@ void inode_free (struct inode *inode);
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length, int property)
 {
   struct inode_disk *disk_inode = NULL;
   struct inode *tmp_inode = NULL;	// temporary in-memory inode
@@ -654,3 +660,5 @@ void inode_free (struct inode *inode) {
 	}
 	free_map_release (inode->sector, 1);
 }
+
+

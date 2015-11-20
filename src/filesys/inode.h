@@ -5,6 +5,9 @@
 #include "filesys/off_t.h"
 #include "devices/block.h"
 
+#define DIR 2
+#define FILE 1
+
 struct bitmap;
 
 void cache_init (void);
