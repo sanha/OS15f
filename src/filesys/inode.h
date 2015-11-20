@@ -24,6 +24,8 @@ off_t inode_length (const struct inode *);
 void print_inode_cnt(const struct inode *);
 int getProperty(struct inode *);
 block_sector_t getInumber(const struct inode *);
+struct inode *dir_getInode(struct dir *d){
+struct inode *file_getInode(struct file *f){
 
 #define FILE 1
 #define DIR 2

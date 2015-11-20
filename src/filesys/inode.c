@@ -43,6 +43,7 @@ struct inode_disk
     block_sector_t start;               /* First data sector. */
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
+	block_sector_t parent;
     uint32_t unused[125];               /* Not used. */
 
 	bool property;
@@ -514,4 +515,35 @@ int getProperty(struct inode *inode){
 
 block_sector_t getInumber(const struct inode *inode){
 	return inode->sector;
+}
+
+struct inode *dir_getInode(struct dir *d){
+	return d->inode;
+}
+
+struct inode *file_getInode(struct file *f){
+	return f->inode;
+}
+
+sec_t inode_getSector(struct inode *inode){
+	return inode->sector;
+}
+
+struct inode *inode_get_parent (const struct inode *inode){
+	return inode->parent;
+}
+struct inode_add_parent(block_sector_t parent, block_sector_t child){
+	struct inode* inode = inode_open(child);
+	if (!inode) return false;
+	inode->parent = parent;
+	inode_close(inode);
+	return true;
+}
+
+void inode_lock(const struct inode* inode){
+	lock_acquire(&((struct inode*)inode)->lock);
+}
+
+void inode_unlock(const struct inode* inode){
+	lock_release(&((struct inode*)inode)->lock);
 }

@@ -30,6 +30,5 @@ bool dir_readdir (struct dir *, char name[NAME_MAX + 1]);
 bool emptyDIR(struct inode *inode);
 bool isRootDIR (struct dir* dir);
 bool getParentDIR (struct dir* dir, struct inode **inode);
-struct inode *dir_getInode(struct file *);
 
 #endif /* filesys/directory.h */

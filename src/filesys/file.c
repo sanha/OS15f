@@ -169,6 +169,3 @@ file_tell (struct file *file)
   return file->pos;
 }
 
-struct inode *file_getInode(struct file *f){
-	return f->inode;
-}

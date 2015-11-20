@@ -281,6 +281,3 @@ bool getParentDIR(struct dir *dir, struct inode **inode){
     return *inode != NULL;
 }
 
-struct inode *dir_getInode(struct dir *d){
-	return d->inode;
-}
