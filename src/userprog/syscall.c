@@ -16,6 +16,7 @@
 #include "filesys/filesys.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "filesys/inode.h"
 
 #define MAX_ARGS 3
 #define USER_VADDR_BOTTOM ((void *)0x08048000)
@@ -200,8 +201,8 @@ int s_open(const char *file)
     f = filesys_open(file);
     if(f)
 	{
-		if(getProperty(file_getInode(f)) == FILE){
-			file_deny_write(f);
+		if(getProperty(file_get_inode(f)) == FILE){
+			//file_deny_write(f);
 			fd = s_add_file(f);
 		}
 		else fd = s_add_dir((struct dir *)f);
@@ -229,7 +230,7 @@ int s_filesize(int fd)
 int s_read(int fd, void *buffer, unsigned size)
 {
     struct file *f;
-	sturct file_elem *fe;
+	struct file_elem *fe;
     int bytes = ERROR;
 
     if(fd == STDIN_FILENO)
@@ -267,9 +268,9 @@ int s_write(int fd, const void *buffer, unsigned size){
 		f = fe->file;
         if (f)  
 		{
-			file_allow_write(f);
+			//file_allow_write(f);
 			bytes = file_write(f, buffer, size);
-			file_deny_write(f);
+			//file_deny_write(f);
 		}
         lock_release(&filesys_lock);
     }
@@ -327,10 +328,9 @@ bool s_readdir(int fd, char *name)
 
 	fe = s_get_file_elem(fd);
 	if(fe == NULL) return false;
-
 	if(fe->property == FILE) return false;
 
-	if(!dir_readdir(fe->dir)) return false;
+	if(!dir_readdir(fe->fd,fe->dir)) return false;
 
 	return true;
 }
@@ -349,8 +349,8 @@ int s_inumber(int fd)
 	if(!fe) return ERROR;
 
 	block_sector_t inumber;
-	if(fe->property == DIR) inumber = getInumber(dir_getInode(pf->dir));
-	else inumber = getInumber(file_getInode(pf->file));
+	if(fe->property == DIR) inumber = getInumber(dir_get_inode(fe->dir));
+	else inumber = getInumber(file_get_inode(fe->file));
 
 	return inumber;
 }
@@ -467,31 +467,31 @@ syscall_handler (struct intr_frame *f UNUSED)
             get_args(f, &args[0], 1);
             s_close((int)args[0]);
             break;
-		case SYS_CHDIR
+		case SYS_CHDIR:
 			get_args(f, &args[0], 1);
-			check_valid_string((const void *) arg[0]);
-			arg[0] = user_to_kernel_ptr((const void *) arg[0]);
-			f->eax = s_chdir((const char *) arg[0]);
+			check_valid_string((const void *) args[0]);
+			args[0] = user_to_kernel((const void *) args[0]);
+			f->eax = s_chdir((const char *) args[0]);
 			break;
 		case SYS_MKDIR:
 			get_args(f, &args[0], 1);
-			check_valid_string((const void *) arg[0]);
-			arg[0] = user_to_kernel_ptr((const void *) arg[0]);
-			f->eax = s_mkdir((const char *) arg[0]);
+			check_valid_string((const void *) args[0]);
+			args[0] = user_to_kernel((const void *) args[0]);
+			f->eax = s_mkdir((const char *) args[0]);
 			break;
 		case SYS_READDIR:
 			get_args(f, &args[0], 2);
-			check_valid_string((const void *) arg[1]);
-			arg[1] = user_to_kernel_ptr((const void *) arg[0]);
-			f->eax = s_readdir((const char *) arg[1]);
+			check_valid_string((const void *) args[1]);
+			args[1] = user_to_kernel((const void *) args[0]);
+			f->eax = s_readdir((int)args[0],(const char *) args[1]);
 			break;
 		case SYS_ISDIR:
 			get_args(f, &args[0], 1);
-			f->eax = s_isdir(arg[0]);
+			f->eax = s_isdir((int)args[0]);
 			break;
 		case SYS_INUMBER:
 			get_args(f, &args[0], 1);
-			f->eax = s_inumber(arg[0]);
+			f->eax = s_inumber((int)args[0]);
 			break;
         default:
             break;
@@ -547,7 +547,7 @@ void s_close_file(int fd)
 		e = list_next(e);
         if(fd == fe->fd || fd == FD_ALL)
         {
-            if (fe->Property == FILE) file_close(fe->file);
+            if (fe->property == FILE) file_close(fe->file);
 			else dir_close(fe->dir);
             list_remove(&fe->elem);
             free(fe);
@@ -594,7 +594,7 @@ int user_to_kernel(const void *vaddr)
 
 void check_valid_string(const void* str)
 {
-	while(*(char *)user_to_kernel_ptr(str) != 0){
-		str = (char *)str + 1'
+	while(*(char *)user_to_kernel(str) != 0){
+		str = (char *)str + 1;
 	}
 }

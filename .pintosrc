@@ -9,9 +9,11 @@ export TEST_EMUL='bochs'
 
 # Current project. One of 'threads' 'userprog' 'vm' 'filesys'
 export PINTOS_PRJ='userprog'
+#export PINTOS_PRJ='filesys'
 
 # Test directory. One of 'threads' 'userprog' 'vm' 'filesys/extended'
 export TEST_DIR='userprog'
+#export TEST_DIR='filesys'
 
 # Test item
 export TEST_ITEM='args-single'

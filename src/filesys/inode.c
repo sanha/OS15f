@@ -3,11 +3,13 @@
 #include <debug.h>
 #include <round.h>
 #include <string.h>
+#include "threads/thread.h"
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 #include "devices/timer.h"
 #include "threads/synch.h"
+#include "filesys/directory.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -58,10 +60,10 @@ struct inode_disk
 	uint32_t ind_idx;					/* first indirect index */
 	uint32_t double_ind_idx;			/* second indirect index */
 	block_sector_t ptr[DIRECT_PTRS];	/* Pointer to direct and indirect blocks */
-    uint32_t unused[122 - DIRECT_PTRS]; /* Not used. */
-
 	int property;
-	block_sedctor_t parent;
+	block_sector_t parent;
+    uint32_t unused[120 - DIRECT_PTRS]; /* Not used. */
+
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -87,10 +89,10 @@ struct inode
     uint32_t ind_idx;                   /* first indirect index */
     uint32_t double_ind_idx;            /* second indirect index */
     block_sector_t ptr[DIRECT_PTRS];    /* Pointer to direct and indirect blocks */ 
-  	struct semaphore write_sema;
+	struct lock lock;
 
 	int property;
-	block_sedctor_t parent;
+	block_sector_t parent;
   };
 
 void cache_init(void)
@@ -256,7 +258,7 @@ void inode_free (struct inode *inode);
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length, int property)
+inode_create (block_sector_t sector, off_t length, bool is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   struct inode *tmp_inode = NULL;	// temporary in-memory inode
@@ -274,6 +276,10 @@ inode_create (block_sector_t sector, off_t length, int property)
     {
 	    disk_inode->length = length;
     	disk_inode->magic = INODE_MAGIC;
+		if (is_dir) disk_inode->property = DIR;
+		else disk_inode->property = FILE;
+		struct thread *cur = thread_current();
+		disk_inode->parent = inode_getSector(dir_get_inode(cur->stage));
 
 		tmp_inode->length = 0;
 		tmp_inode->dir_idx = 0;
@@ -332,15 +338,16 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-
+  lock_init(&inode->lock);
   struct inode_disk *disk_inode;
   disk_inode = calloc (1, sizeof *disk_inode);
   block_read (fs_device, inode->sector, disk_inode);
+  inode->property = disk_inode->property;
+  inode->parent = disk_inode->parent;
   inode->dir_idx = disk_inode->dir_idx;
   inode->ind_idx = disk_inode->ind_idx;
   inode->double_ind_idx = disk_inode->double_ind_idx;
   inode->length = disk_inode->length;
-  sema_init(&inode->write_sema, 1);
   memcpy(inode->ptr, disk_inode->ptr, DIRECT_PTRS * sizeof(block_sector_t));	// TODO: CHECK
   free (disk_inode);
   return inode;
@@ -463,12 +470,13 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   if (inode->deny_write_cnt)
     return 0;
 
-  sema_down(&inode->write_sema);
 
   if (size + offset > inode->length) {
-	//printf ("	@ inode_write_at: call inode_expand. length is %d, sector is %d\n", inode->length, inode->sector);
+	lock_acquire(&inode->lock);
+	  //printf ("	@ inode_write_at: call inode_expand. length is %d, sector is %d\n", inode->length, inode->sector);
 	inode_expand (inode, size + offset);
   	inode->length = size + offset;
+	lock_release(&inode->lock);
   }
 
   //printf("	@ inode_write_at: inode_write is called. inode's sector is %d, size is %d, offset is  %d\n",inode->sector,size, offset);
@@ -504,7 +512,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       bytes_written += chunk_size;
     }
 
-  sema_up(&inode->write_sema);
   return bytes_written;
 }
 
@@ -535,9 +542,9 @@ inode_length (const struct inode *inode)
   return inode->length;
 }
 
-void
-print_inode_cnt(const struct inode *inode)
+int get_inode_open_cnt(const struct inode *inode)
 {
+	return inode->open_cnt;
 	//printf("deny_write_cnt : %d\n", inode->deny_write_cnt);
 }
 
@@ -661,4 +668,41 @@ void inode_free (struct inode *inode) {
 	free_map_release (inode->sector, 1);
 }
 
+int getProperty(struct inode *inode){
+	return inode -> property;
+}
 
+block_sector_t getInumber(const struct inode *inode){
+	return inode->sector;
+}
+
+/*struct inode *dir_getInode(struct dir *d){
+	return d->inode;
+}*/
+
+/*struct inode *file_getInode(struct file *f){
+	return f->inode;
+}*/
+
+block_sector_t inode_getSector(struct inode *inode){
+	return inode->sector;
+}
+
+block_sector_t inode_get_parent (const struct inode *inode){
+	return inode->parent;
+}
+bool inode_add_parent(block_sector_t parent, block_sector_t child){
+	struct inode* inode = inode_open(child);
+	if (!inode) return false;
+	inode->parent = parent;
+	inode_close(inode);
+	return true;
+}
+
+void inode_lock_acquire(struct inode *inode){
+	lock_acquire(&inode->lock);
+}
+
+void inode_lock_release(struct inode *inode){
+	lock_release(&inode->lock);
+}

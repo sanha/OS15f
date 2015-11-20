@@ -6,8 +6,8 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
-#include "thread/thread.h"
-#include "malloc.h"
+#include "threads/thread.h"
+#include "threads/malloc.h"
 
 #define SLASH 47
 
@@ -55,7 +55,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 {
   block_sector_t inode_sector = 0;
   struct dir *dir = parse_dir(name);
-  char* fname = parese_file(name);
+  char* fname = parse_file(name);
   bool success = false;
 
   if(strcmp(fname, ".") != 0 && strcmp(fname, "..") != 0){	  
@@ -156,7 +156,7 @@ struct dir* parse_dir (const char* path)
 
 	char *token = strtok_r(copy, "/", temp);
 	if(token) next_token = strtok_r(NULL, "/", &temp);
-	for(; next_token != NULL; next_token = strtok_r(NULL, "/". &temp)){
+	for(; next_token != NULL; next_token = strtok_r(NULL, "/", &temp)){
 		if(strcmp(token, ".") != 0){
 			if(strcmp(next_token, "..") == 0){
 				if(!getParentDIR(dir, &inode)) return NULL;}
@@ -199,7 +199,7 @@ bool filesys_chdir(const char* name)
 
   if(dir != NULL){
 	  if (strcmp(fname, "..")){
-		  free(fname)
+		  free(fname);
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
 			  return false;
@@ -211,7 +211,7 @@ bool filesys_chdir(const char* name)
 	  }
 	  else if(isRootDIR(dir) && strlen(fname) == 0){
 		  free(fname);
-		  dir_close( thread_current -> stage);
+		  dir_close( thread_current() -> stage);
 		  thread_current() -> stage = dir;
 		  return true;
 	  }
