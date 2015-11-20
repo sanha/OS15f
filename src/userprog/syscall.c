@@ -220,6 +220,10 @@ int s_filesize(int fd)
 
    lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
+	if(!fe) {
+		lock_release(&filesys_lock);
+		return size;
+	}
 	f = fe->file;
     if(f)   size = file_length(f);
    lock_release(&filesys_lock);
@@ -245,6 +249,10 @@ int s_read(int fd, void *buffer, unsigned size)
     {
        lock_acquire(&filesys_lock);
         fe = s_get_file_elem(fd);
+		if (!fe) {
+			lock_release(&filesys_lock);
+			return bytes;
+		}
 		f = fe->file;
         if(f)   bytes = file_read(f, buffer, size);
        lock_release(&filesys_lock);
@@ -265,6 +273,10 @@ int s_write(int fd, const void *buffer, unsigned size){
     {
        lock_acquire(&filesys_lock);
         fe = s_get_file_elem(fd);
+		if (!fe) {
+			lock_release(&filesys_lock);
+			return bytes;
+		}
 		f = fe->file;
         if (f)  
 		{
@@ -284,6 +296,10 @@ void s_seek(int fd, unsigned position)
 
    lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
+	if (!fe) {
+		lock_release(&filesys_lock);
+		return ;
+	}
 	f = fe->file;
     if(f)   file_seek(f, position);
    lock_release(&filesys_lock);
@@ -297,6 +313,10 @@ unsigned s_tell(int fd)
 
    lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
+	if (!fe) {
+		lock_release(&filesys_lock);
+		return position;
+	}
 	f = fe->file;
     if(f)   position = file_tell(f);
    lock_release(&filesys_lock);

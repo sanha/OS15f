@@ -30,7 +30,7 @@ filesys_init (bool format)
   
   cache_init ();
   inode_init ();
-  lock_init (&lock);
+  //lock_init (&lock);
   free_map_init ();
 
   if (format) 
@@ -55,7 +55,8 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
-	lock_acquire(&lock);
+  if (strlen(name) == 0) return false;
+  //lock_acquire(&lock);
   block_sector_t inode_sector = 0;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
@@ -73,7 +74,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   dir_close (dir);
 
   free(fname);
-  lock_release(&lock);
+  //lock_release(&lock);
 
   return success;
 }
@@ -86,7 +87,8 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
-  lock_acquire(&lock);
+  if (strlen(name) == 0) return NULL;
+  //lock_acquire(&lock);
   struct inode *inode = NULL;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
@@ -95,31 +97,31 @@ filesys_open (const char *name)
 	  if (strcmp(fname, "..") == 0){
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
-			  lock_release(&lock);
+	//		  lock_release(&lock);
 			  return NULL;
 		  }
  	  }
 	  else if(strcmp(fname, ".") == 0 || (isRootDIR(dir) && strlen(fname) == 0)){
 		  free(fname);
-		  lock_release(&lock);
+	//	  lock_release(&lock);
 		  return (struct file *) dir;
 	  }
 	  else{
    	 	if(!dir_lookup (dir, name, &inode)){
 			free(fname);
-			lock_release(&lock);
+	//		lock_release(&lock);
 			return NULL;
 		}
 	  }
   }
   else {
-	  lock_release(&lock);
+	//  lock_release(&lock);
 	  return NULL;
   }
 
   dir_close (dir);
   if (fname) free(fname);
-  lock_release(&lock);
+  //lock_release(&lock);
 
   if(getProperty(inode) == DIR) return (struct file *) dir_open(inode);
   return file_open (inode);
@@ -131,15 +133,15 @@ filesys_open (const char *name)
    or if an internal memory allocation fails. */
 bool
 filesys_remove (const char *name) 
-{
-	lock_acquire(&lock);
+{ 
+  //lock_acquire(&lock);
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
   bool success = dir != NULL && dir_remove(dir, fname);
 
   dir_close (dir); 
   free(fname);
-  lock_release(&lock);
+  //lock_release(&lock);
 
   return success;
 }
@@ -209,6 +211,7 @@ char* parse_file(const char* path)
 
 bool filesys_chdir(const char* name)
 {
+  if (strlen(name) == 0) return false;
   struct inode *inode = NULL;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
