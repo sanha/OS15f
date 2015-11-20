@@ -53,6 +53,7 @@ process_execute (const char *file_name)
   fptr = filesys_open(fn);
   exist_flag = (fptr!=NULL);
 
+
   /* Create a new thread to execute FILE_NAME. */
   /* Before creating, check exist_flag */
   if (!exist_flag){
@@ -93,6 +94,8 @@ start_process (void *file_name_)
       sema_up(&t->exec_sema);
       sema_down(&t->load_sema);
   }
+
+  if(!t->stage) t->stage = dir_open_root();
   
   t->file_name = filesys_open(file_name);
 
@@ -191,6 +194,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  if(cur->stage) dir_close(cur->stage);
 }
 
 /* Sets up the CPU for running user code in the current

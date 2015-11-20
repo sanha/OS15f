@@ -153,10 +153,10 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  inode_lock_release(dir_get_inode(dir));
+  inode_lock_acquire(dir_get_inode(dir));
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
-    return false;
+	  goto done;
 
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
@@ -255,6 +255,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
       if (e.in_use)
         {
           strlcpy (name, e.name, NAME_MAX + 1);
+		  inode_lock_release(dir_get_inode(dir));
           return true;
         } 
     }

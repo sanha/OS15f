@@ -92,14 +92,14 @@ filesys_open (const char *name)
   char* fname = parse_file(name);
   
   if (dir != NULL){
-	  if (strcmp(fname, "..")){
+	  if (strcmp(fname, "..") == 0){
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
 			  lock_release(&lock);
 			  return NULL;
 		  }
  	  }
-	  else if(strcmp(fname, ".") || (isRootDIR(dir) && strlen(fname) == 0)){
+	  else if(strcmp(fname, ".") == 0 || (isRootDIR(dir) && strlen(fname) == 0)){
 		  free(fname);
 		  lock_release(&lock);
 		  return (struct file *) dir;
@@ -112,6 +112,8 @@ filesys_open (const char *name)
 		}
 	  }
   }
+  else return NULL;
+
   dir_close (dir);
   if (fname) free(fname);
   lock_release(&lock);
@@ -184,7 +186,7 @@ struct dir* parse_dir (const char* path)
 
 char* parse_file(const char* path)
 {
-	printf("	@ parse_file, path = %s\n",path);
+	//printf("	@ parse_file, path = %s\n",path);
 	char copy[strlen(path) + 1];
 	memcpy(copy, path, strlen(path) + 1);
 
@@ -210,14 +212,14 @@ bool filesys_chdir(const char* name)
 
 
   if(dir != NULL){
-	  if (strcmp(fname, "..")){
+	  if (strcmp(fname, "..") == 0){
 		  free(fname);
 		  if(!getParentDIR(dir, &inode)){
 			  free(fname);
 			  return false;
 		  }
  	  }
-	  else if(strcmp(fname, ".")){
+	  else if(strcmp(fname, ".") == 0){
 		  free(fname);
 		  return true;
 	  }
@@ -234,6 +236,7 @@ bool filesys_chdir(const char* name)
 		}
 	  }
   }
+  else return NULL;
 
   dir_close(dir);
   free(fname);
