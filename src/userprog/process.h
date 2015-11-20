@@ -3,13 +3,6 @@
 
 #include "threads/thread.h"
 
-struct process_file {
-    struct file *file;
-    struct dir *dir;
-    bool property;
-    int fd;
-    struct list_elem elem;
-};
 
 int process_add_object (void *object, bool property);
 tid_t process_execute (const char *file_name);

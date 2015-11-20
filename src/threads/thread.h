@@ -160,6 +160,8 @@ struct thread
 	int child_wait, zombie_flag;
 	int load_wait;
 	enum Load_status load_status;
+
+	struct dir *stage; /* directory that thread is running on */
   };
 
 /* If false (default), use round-robin scheduler.

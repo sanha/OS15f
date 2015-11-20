@@ -602,6 +602,7 @@ install_page (void *upage, void *kpage, bool writable)
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
+/*
 int process_add_object (void *object, bool property){
     struct file_elem *pf;
     pf = malloc(sizeof(struct process_file));
@@ -616,3 +617,4 @@ int process_add_object (void *object, bool property){
     list_push_back(&thread_current()->u_open_files, &pf->elem);
     return pf->fd;
 }
+*/
