@@ -90,6 +90,7 @@ struct inode
     uint32_t double_ind_idx;            /* second indirect index */
     block_sector_t ptr[DIRECT_PTRS];    /* Pointer to direct and indirect blocks */ 
 	struct lock lock;
+	struct lock write_lock;
 
 	int property;
 	block_sector_t parent;
@@ -344,6 +345,7 @@ inode_open (block_sector_t sector)
   inode->deny_write_cnt = 0;
   inode->removed = false;
   lock_init(&inode->lock);
+  lock_init(&inode->write_lock);
   struct inode_disk *disk_inode;
   disk_inode = calloc (1, sizeof *disk_inode);
   block_read (fs_device, inode->sector, disk_inode);
@@ -480,12 +482,12 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
   if (size + offset > inode->length) {
 	if (inode->property == FILE)
-		lock_acquire(&inode->lock);
+		lock_acquire(&inode->write_lock);
 	  //printf ("	@ inode_write_at: call inode_expand. length is %d, sector is %d\n", inode->length, inode->sector);
 	inode_expand (inode, size + offset);
   	inode->length = size + offset;
 	if (inode->property == FILE)
-		lock_release(&inode->lock);
+		lock_release(&inode->write_lock);
   }
 
   //printf("	@ inode_write_at: inode_write is called. inode's sector is %d, size is %d, offset is  %d\n",inode->sector,size, offset);
