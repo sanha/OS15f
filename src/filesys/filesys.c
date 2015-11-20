@@ -86,7 +86,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
-	lock_acquire(&lock);
+  lock_acquire(&lock);
   struct inode *inode = NULL;
   struct dir *dir = parse_dir(name);
   char* fname = parse_file(name);
@@ -112,7 +112,10 @@ filesys_open (const char *name)
 		}
 	  }
   }
-  else return NULL;
+  else {
+	  lock_release(&lock);
+	  return NULL;
+  }
 
   dir_close (dir);
   if (fname) free(fname);
@@ -165,7 +168,7 @@ struct dir* parse_dir (const char* path)
 
 	// if first path name "/" or active directory is null, go to root
 	if(copy[0] == SLASH || !thread_current()->stage) dir = dir_open_root();
-	else dir_reopen(thread_current()->stage);
+	else dir = dir_reopen(thread_current()->stage);
 
 	char *token = strtok_r(copy, "/", &temp);
 	if(token) next_token = strtok_r(NULL, "/", &temp);

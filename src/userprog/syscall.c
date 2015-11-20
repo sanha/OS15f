@@ -174,9 +174,9 @@ bool s_create(const char *file, unsigned initial_size)
 {
     bool success = false;
     
-    lock_acquire(&filesys_lock);
+   lock_acquire(&filesys_lock);
     success = filesys_create(file, initial_size, false);
-    lock_release(&filesys_lock);
+   lock_release(&filesys_lock);
     
     return success;
 }
@@ -185,9 +185,9 @@ bool s_remove(const char *file)
 {
     bool success = false;
 
-    lock_acquire(&filesys_lock);
-    success = filesys_remove(file);
-    lock_release(&filesys_lock);
+   lock_acquire(&filesys_lock);
+   success = filesys_remove(file);
+   lock_release(&filesys_lock);
 
     return success;
 }
@@ -197,7 +197,7 @@ int s_open(const char *file)
     struct file *f;
     int fd = ERROR;
 
-    lock_acquire(&filesys_lock);
+   lock_acquire(&filesys_lock);
     f = filesys_open(file);
     if(f)
 	{
@@ -207,7 +207,7 @@ int s_open(const char *file)
 		}
 		else fd = s_add_dir((struct dir *)f);
 	}
-    lock_release(&filesys_lock);
+   lock_release(&filesys_lock);
 
     return fd;
 }
@@ -218,11 +218,11 @@ int s_filesize(int fd)
 	struct file *f;
     int size = ERROR;
 
-    lock_acquire(&filesys_lock);
+   lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
 	f = fe->file;
     if(f)   size = file_length(f);
-    lock_release(&filesys_lock);
+   lock_release(&filesys_lock);
 
     return size;
 }
@@ -243,11 +243,11 @@ int s_read(int fd, void *buffer, unsigned size)
     }
     else
     {
-        lock_acquire(&filesys_lock);
+       lock_acquire(&filesys_lock);
         fe = s_get_file_elem(fd);
 		f = fe->file;
         if(f)   bytes = file_read(f, buffer, size);
-        lock_release(&filesys_lock);
+       lock_release(&filesys_lock);
     }
     return bytes;
 }
@@ -263,7 +263,7 @@ int s_write(int fd, const void *buffer, unsigned size){
     }
     else
     {
-        lock_acquire(&filesys_lock);
+       lock_acquire(&filesys_lock);
         fe = s_get_file_elem(fd);
 		f = fe->file;
         if (f)  
@@ -272,7 +272,7 @@ int s_write(int fd, const void *buffer, unsigned size){
 			bytes = file_write(f, buffer, size);
 			//file_deny_write(f);
 		}
-        lock_release(&filesys_lock);
+       lock_release(&filesys_lock);
     }
     return bytes;
 }
@@ -282,11 +282,11 @@ void s_seek(int fd, unsigned position)
     struct file *f;
 	struct file_elem *fe;
 
-    lock_acquire(&filesys_lock);
+   lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
 	f = fe->file;
     if(f)   file_seek(f, position);
-    lock_release(&filesys_lock);
+   lock_release(&filesys_lock);
 }
 
 unsigned s_tell(int fd)
@@ -295,11 +295,11 @@ unsigned s_tell(int fd)
 	struct file_elem *fe;
     unsigned position = ERROR;
 
-    lock_acquire(&filesys_lock);
+   lock_acquire(&filesys_lock);
     fe = s_get_file_elem(fd);
 	f = fe->file;
     if(f)   position = file_tell(f);
-    lock_release(&filesys_lock);
+   lock_release(&filesys_lock);
     
     return position;
 }
