@@ -224,12 +224,15 @@ dir_remove (struct dir *dir, const char *name)
 
   /* Open inode. */
   inode = inode_open (e.inode_sector);
+  //printf("		@ before inode null check\n");
   if (inode == NULL)
     goto done;
 
+  //printf("		@ before empty check\n");
   /* Be an empty directory. */
-  if (getProperty(inode) == DIR && emptyDIR(dir) == false)
+  if (getProperty(inode) == DIR && emptyDIR(dir_get_inode(dir)) == false)
       goto done;
+  //printf("		@ after empty check\n");
 
   /* Be an unused directory. */
   if (getProperty(inode) == DIR && get_inode_open_cnt(dir_get_inode(inode)) >= 1)
@@ -258,7 +261,6 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
 
-  
   inode_lock_acquire(dir_get_inode(dir));
 
   while (inode_read_at (dir_get_inode(dir), &e, sizeof e, dir->pos) == sizeof e) 
@@ -273,6 +275,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
     }
   
   inode_lock_release(dir_get_inode(dir));
+  printf("		@ dir_readdir end!\n"); 
   return false;
 }
 

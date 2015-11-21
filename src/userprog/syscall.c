@@ -278,7 +278,7 @@ int s_write(int fd, const void *buffer, unsigned size){
 			return bytes;
 		}
 		f = fe->file;
-        if (f)  
+        if (f && fe->property == FILE)  
 		{
 			//file_allow_write(f);
 			bytes = file_write(f, buffer, size);
@@ -350,7 +350,11 @@ bool s_readdir(int fd, char *name)
 	if(fe == NULL) return false;
 	if(fe->property == FILE) return false;
 
-	if(!dir_readdir(fe->fd,fe->dir)) return false;
+	if(!dir_readdir(fe->fd,fe->dir)) {
+		//printf("		@ s_readdir dir_readdir_failed\n");
+		return false;
+	}
+
 
 	return true;
 }
@@ -366,11 +370,15 @@ bool s_isdir(int fd)
 int s_inumber(int fd)
 {
 	struct file_elem *fe = s_get_file_elem(fd);
-	if(!fe) return ERROR;
+	if(!fe) {
+		return ERROR;
+	}
 
 	block_sector_t inumber;
-	if(fe->property == DIR) inumber = getInumber(dir_get_inode(fe->dir));
-	else inumber = getInumber(file_get_inode(fe->file));
+	if(fe->property == DIR) inumber = inode_getSector(dir_get_inode(fe->dir));
+	else inumber = inode_getSector(file_get_inode(fe->file));
+
+	printf("		@ s_inumber fd = %d, inumber = %d\n", fd, inumber);
 
 	return inumber;
 }
@@ -502,7 +510,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 		case SYS_READDIR:
 			get_args(f, &args[0], 2);
 			check_valid_string((const void *) args[1]);
-			args[1] = user_to_kernel((const void *) args[0]);
+			args[1] = user_to_kernel((const void *) args[1]);
 			f->eax = s_readdir((int)args[0],(const char *) args[1]);
 			break;
 		case SYS_ISDIR:

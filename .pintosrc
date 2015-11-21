@@ -16,7 +16,7 @@ export PINTOS_PRJ='filesys'
 export TEST_DIR='filesys'
 
 # Test item
-export TEST_ITEM='extended/dir-open'
+export TEST_ITEM='extended/dir-rm-cwd'
 
 # Additional test file like 'child-simple' 'tar' ...
 export ADD_TEST_FILE='child-simple'

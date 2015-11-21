@@ -481,7 +481,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   if (inode->deny_write_cnt)
     return 0;
 
-
   if (size + offset > inode->length) {
 	if (inode->property == FILE)
 		lock_acquire(&inode->write_lock);
