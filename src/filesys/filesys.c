@@ -73,7 +73,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
     free_map_release (inode_sector, 1);
   dir_close (dir);
 
-  //printf("		@ success for %s = %d\n", fname, success);
+  //printf("		@ filesys_create success to create %s = %d\n", fname, success);
 
   free(fname);
   //lock_release(&lock);
@@ -109,8 +109,8 @@ filesys_open (const char *name)
 		  return (struct file *) dir;
 	  }
 	  else{
+		  //printf("		@ filesys_open sector of dir = %d\n", inode_getSector(dir_get_inode(dir)));
    	 	if(!dir_lookup (dir, fname, &inode)){
-  		printf("		@ wow\n");
 			free(fname);
 	//		lock_release(&lock);
 			return NULL;
@@ -126,6 +126,7 @@ filesys_open (const char *name)
   if (fname) free(fname);
   //lock_release(&lock);
 
+  //printf("		@ filesys_open about to file_open()\n");
   if(getProperty(inode) == DIR)
 	  return (struct file *) dir_open(inode);
   return file_open (inode);
@@ -203,7 +204,7 @@ char* parse_file(const char* path)
 
 	struct dir *dir;
 	char *temp = NULL;
-	char *prev_token = NULL;
+	char *prev_token = "";
 
 	char *token = strtok_r(copy, "/", &temp);
 	for(; token != NULL; token = strtok_r(NULL, "/", &temp)){
@@ -259,7 +260,7 @@ bool filesys_chdir(const char* name)
   if(dir != NULL){
 	  dir_close(thread_current() -> stage);
 	  thread_current() -> stage = dir;
-	  dir_close(dir);
+	  //dir_close(dir);
 	  return true;
   }
 

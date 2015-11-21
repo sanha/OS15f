@@ -316,6 +316,8 @@ inode_create (block_sector_t sector, off_t length, bool is_dir)
 struct inode *
 inode_open (block_sector_t sector)
 {
+//  printf("		@ inode_open sector = %d\n", sector);
+
   struct list_elem *e;
   struct inode *inode;
 
