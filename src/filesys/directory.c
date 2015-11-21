@@ -275,7 +275,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
     }
   
   inode_lock_release(dir_get_inode(dir));
-  printf("		@ dir_readdir end!\n"); 
+  //printf("		@ dir_readdir end!\n"); 
   return false;
 }
 

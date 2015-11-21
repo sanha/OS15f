@@ -350,7 +350,7 @@ bool s_readdir(int fd, char *name)
 	if(fe == NULL) return false;
 	if(fe->property == FILE) return false;
 
-	if(!dir_readdir(fe->fd,fe->dir)) {
+	if(!dir_readdir(fe->dir,name)) {
 		//printf("		@ s_readdir dir_readdir_failed\n");
 		return false;
 	}
@@ -378,7 +378,7 @@ int s_inumber(int fd)
 	if(fe->property == DIR) inumber = inode_getSector(dir_get_inode(fe->dir));
 	else inumber = inode_getSector(file_get_inode(fe->file));
 
-	printf("		@ s_inumber fd = %d, inumber = %d\n", fd, inumber);
+	//printf("		@ s_inumber fd = %d, inumber = %d\n", fd, inumber);
 
 	return inumber;
 }
