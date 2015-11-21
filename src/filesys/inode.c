@@ -180,6 +180,7 @@ void write_back_cache_list(bool halt)
 			list_remove(&cb->elem);
 			free(cb->block);
 			free(cb);
+			cache_size--;
 		}
 		e = next;
 	}

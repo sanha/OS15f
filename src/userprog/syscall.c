@@ -112,7 +112,8 @@ void s_exit(int status){
     set_hierarchy_delete(); // delete myself
     //printf("			cur->file_name = %s\n",cur->file_name == NULL ? "NULL" : "NOT NULL");
 	if (cur->file_name) file_close(cur->file_name);
-    sema_up(&cur->exit_sema); 	
+    sema_up(&cur->exit_sema); 
+	write_back_cache_list(false);
 	//printf("	@ s_exit left space is: %d\n", left_space());	
 	thread_exit();
 }
