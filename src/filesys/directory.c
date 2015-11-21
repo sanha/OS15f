@@ -125,26 +125,26 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  //printf("		@ dir_lookup sector of directory = %d\n", inode_getSector(dir->inode));
+  //printf("        @ dir_lookup sector of directory = %d\n", inode_getSector(dir->inode));
 
   inode_lock_acquire(dir_get_inode(dir));
 
-  //printf("		@ dir_lookup about to lookup\n");
+  //printf("        @ dir_lookup about to lookup\n");
   //struct inode *i = NULL;
   //getParentDIR(dir, &i);
   //ASSERT(i != NULL);
-  //printf("		@ dir_lookup parent sector = %d\n", inode_getSector(i));
+  //printf("        @ dir_lookup parent sector = %d\n", inode_getSector(i));
 
   if (lookup (dir, name, &e, NULL)){
-	  //printf("		@ dir_lookup lookup successed\n");
+      //printf("        @ dir_lookup lookup successed\n");
     *inode = inode_open (e.inode_sector);
   }
   else{
-	  //printf("		@ dir_lookup lookup failed\n");
+      //printf("        @ dir_lookup lookup failed\n");
     *inode = NULL;
   }
   inode_lock_release(dir_get_inode(dir));
-  //printf("		@ dir_lookup finished\n");
+  //printf("        @ dir_lookup finished\n");
 
   return *inode != NULL;
 }
@@ -168,7 +168,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   inode_lock_acquire(dir_get_inode(dir));
   /* Check NAME for validity. */
   if (*name == '\0' || strlen (name) > NAME_MAX)
-	  goto done;
+      goto done;
 
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
@@ -224,18 +224,18 @@ dir_remove (struct dir *dir, const char *name)
 
   /* Open inode. */
   inode = inode_open (e.inode_sector);
-  //printf("		@ before inode null check\n");
+  //printf("        @ before inode null check\n");
   if (inode == NULL)
     goto done;
 
-  //printf("		@ before empty check\n");
+  //printf("        @ before empty check\n");
   /* Be an empty directory. */
-  if (getProperty(inode) == DIR && emptyDIR(dir_get_inode(dir)) == false)
+  if (getProperty(inode) == DIR && emptyDIR(inode) == false)
       goto done;
-  //printf("		@ after empty check\n");
+  //printf("        @ after empty check\n");
 
   /* Be an unused directory. */
-  if (getProperty(inode) == DIR && get_inode_open_cnt(dir_get_inode(inode)) >= 1)
+  if (getProperty(inode) == DIR && get_inode_open_cnt(inode) > 1)
       goto done;
 
   /* Erase directory entry. */
@@ -269,13 +269,13 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
       if (e.in_use)
         {
           strlcpy (name, e.name, NAME_MAX + 1);
-		  inode_lock_release(dir_get_inode(dir));
+          inode_lock_release(dir_get_inode(dir));
           return true;
         } 
     }
   
   inode_lock_release(dir_get_inode(dir));
-  //printf("		@ dir_readdir end!\n"); 
+  //printf("        @ dir_readdir end!\n"); 
   return false;
 }
 
