@@ -91,6 +91,8 @@ main (void)
   console_init ();  
 
   /* Greet user. */
+  char *tmpString = "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss";
+  printf ("%s\n", tmpString);
   printf ("Pintos booting with %'"PRIu32" kB RAM...\n",
           init_ram_pages * PGSIZE / 1024);
 

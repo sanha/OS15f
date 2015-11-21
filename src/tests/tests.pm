@@ -247,7 +247,8 @@ sub check_archive {
     my ($expected_hier) = @_;
 
     my (@output) = read_text_file ("$test.output");
-    common_checks ("file system extraction run", @output);
+	common_checks ("file system extraction run", @output);
+#common_checks ("run", @output);
 
     @output = get_core_output ("file system extraction run", @output);
     @output = grep (!/^[a-zA-Z0-9-_]+: exit\(\d+\)$/, @output);

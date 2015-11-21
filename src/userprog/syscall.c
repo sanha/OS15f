@@ -17,6 +17,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "filesys/inode.h"
+#include "devices/serial.h"
 
 #define MAX_ARGS 3
 #define USER_VADDR_BOTTOM ((void *)0x08048000)
@@ -267,8 +268,11 @@ int s_write(int fd, const void *buffer, unsigned size){
     int bytes = ERROR;
     //printf("s_write is called\n");
     if (fd == STDOUT_FILENO){
+		//lock_acquire(&filesys_lock);
         putbuf(buffer, size);
         bytes = size;
+		//serial_flush();
+		//lock_release(&filesys_lock);
     }
     else
     {
