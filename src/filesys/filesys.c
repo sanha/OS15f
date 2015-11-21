@@ -180,7 +180,7 @@ struct dir* parse_dir (const char* path)
 	char *token = strtok_r(copy, "/", &temp);
 	if(token) next_token = strtok_r(NULL, "/", &temp);
 	for(; next_token != NULL; next_token = strtok_r(NULL, "/", &temp)){
-		if(strcmp(token, ".") != 0){
+		if(strcmp(token, ".") != 0 && strcmp(token, "") != 0){
 			//printf("		@ parsed dir name = %s\n", token);
 			if(strcmp(token, "..") == 0){
 				if(!getParentDIR(dir, &inode)) return NULL;}
