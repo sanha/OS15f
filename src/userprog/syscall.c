@@ -249,15 +249,15 @@ int s_read(int fd, void *buffer, unsigned size)
     }
     else
     {
-       lock_acquire(&filesys_lock);
+       //lock_acquire(&filesys_lock);
         fe = s_get_file_elem(fd);
 		if (!fe) {
-			lock_release(&filesys_lock);
+			//lock_release(&filesys_lock);
 			return bytes;
 		}
 		f = fe->file;
         if(f)   bytes = file_read(f, buffer, size);
-       lock_release(&filesys_lock);
+       //lock_release(&filesys_lock);
     }
     return bytes;
 }
